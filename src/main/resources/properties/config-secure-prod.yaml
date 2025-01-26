@@ -1,0 +1,8 @@
+#heimanfire-db-sys-api client details
+heimanfire:
+  db:
+    clientSecret: "![f/voE3LfZY5t7/f3LHU9IwmFs559grPoR2fvWXdWPS5mnzYJegSyUyCNYoK3RUt0]"
+
+#heimanfire-sfdc-sys-api client details
+heimanfire-sfdc:
+  clientSecret: "![3ZU4B5qlwicLQgooeJi5O8c+QJ9/kSECO0sKHNSUohG8+r+7FkLr0z5BsRV5/2P1]"         

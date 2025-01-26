@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<sub-flow name="common-request-sage-subflow" doc:id="860e7312-d3a5-403c-be2c-f96822d0f57a" >
+		<try doc:name="Try" doc:id="3da01ccd-1746-4732-94dc-b1a4f0a46412">
+					<http:request method="#[vars.requestPaths.method]" doc:name="Request for db system api's" doc:id="8a784b3a-694d-453a-b846-b8437c78981f" responseTimeout="${http-request.timeout}" config-ref="HTTP_Request_configuration_sage_100" path="#[vars.requestPaths.url]">
+				<http:headers ><![CDATA[#[import p from Mule
+output application/java
+---
+{
+	client_secret : p('secure::heimanfire.db.clientSecret'),
+	client_id : p('heimanfire.db.clientId')
+}]]]></http:headers>
+		</http:request>
+					<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="ae91328d-21a3-4692-bf83-3ec4003e779d" type="ANY">
+					<logger level="INFO" doc:name="Connectivity error log" doc:id="ee7884a4-426e-48d8-a07b-9bc42e7de055" message="SFDC and DB calling request service has down" />
+					<ee:transform doc:name="DW errorDescription" doc:id="66e46def-5682-4e79-a2eb-433983169977">
+						<ee:message>
+							<ee:set-payload><![CDATA[output application/json
+---
+if (!isEmpty(vars.error_object.errorMessage)) (vars.error_object)
+
+else
+{
+	"errorCode": error.errorCode,
+	"errorDescription": error.description,
+	"identifier": error.errorType.identifier,
+	"errorType": error.errorType,
+	"transactionId": correlationId,
+	"timeStamp": now() as DateTime
+}
+
+
+]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+					</error-handler>
+				</try>
+	</sub-flow>
+	<sub-flow name="common-request-salesforce-subflow" doc:id="1425cc1d-8606-4e49-a6fc-d2e12c647b0e" >
+		<try doc:name="Try" doc:id="9f54b34b-6759-4560-8e03-9a8094fb4da0">
+					<http:request method="#[vars.requestPaths.method]" doc:name="Request sfdc system api's" doc:id="ead75861-6315-4215-8622-d3219be9d0de" responseTimeout="${http-request.timeout}" config-ref="HTTP_Request_configuration-salesforce" path="#[vars.requestPaths.url]">
+				<http:headers ><![CDATA[#[import p from Mule
+output application/java
+---
+{
+	client_secret : p('secure::heimanfire-sfdc.clientSecret'),
+	client_id : p('heimanfire-sfdc.clientId')
+}]]]></http:headers>
+		</http:request>
+					<error-handler>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="d71aba2f-0bf7-42eb-b0bd-2b06d9fd3534" type="ANY">
+					<logger level="INFO" doc:name="Connectivity error log" doc:id="3dc21e41-d219-4f46-a82c-bd3379dde557" message="SFDC and DB calling request service has down" />
+					<ee:transform doc:name="DW errorDescription" doc:id="05388836-af77-4a2f-9a86-b23c55cf6e56">
+						<ee:message>
+							<ee:set-payload><![CDATA[output application/json
+---
+if (!isEmpty(vars.error_object.errorMessage)) (vars.error_object)
+
+else
+{
+	"errorCode": error.errorCode,
+	"errorDescription": error.description,
+	"identifier": error.errorType.identifier,
+	"errorType": error.errorType,
+	"transactionId": correlationId,
+	"timeStamp": now() as DateTime
+}
+
+
+]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-propagate>
+					</error-handler>
+				</try>
+	</sub-flow>
+</mule>

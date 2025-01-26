@@ -1,0 +1,8 @@
+#heimanfire-db-sys-api client details
+heimanfire:
+  db:
+    clientSecret: ""
+
+#heimanfire-sfdc-sys-api client details
+heimanfire-sfdc:
+  clientSecret: ""         

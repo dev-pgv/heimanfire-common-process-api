@@ -1,0 +1,55 @@
+# Listener configuration
+https:
+  host: "0.0.0.0"
+  port: "8081"
+  path: "/*"
+#cron expression
+cron:
+  products: "0 0 1 ? * MON-FRI *"
+    
+#heimanfire-sfdc-sys-api Listener configuration
+sfdc-request:
+  https:
+    products-method: "POST"
+    pricebook-method: "GET"
+    customers-method: "POST"
+    attachment-method: "POST" 
+    protocol: "https"
+    host: "prod-heimanfire-sfdc-sys-api-du22kx.nuw5ad.usa-e2.cloudhub.io"
+    port: "443"
+    products: "/api/v1/products"
+     
+
+#heimanfire-db-sys-api Listener configuration
+db:
+  request:
+    https:
+      method: "GET"
+      customerstatus-method: "POST"
+      protocol: "https"
+      host: "prod-heimanfire-db-sys-api-du22kx.nuw5ad.usa-e2.cloudhub.io"
+      port: "443"
+      productlist: "/api/v1/productlist"
+
+#heimanfire-db-sys-api client details
+heimanfire:
+  db:
+    clientId: "7547fccc7c7d47d3ab385452ded97e44" 
+
+#heimanfire-sfdc-sys-api client details
+heimanfire-sfdc:
+  clientId: "5be0bd4fd0fb4bbdbcee9b630006dba8" 
+    
+#Request Timeout config
+http-request:
+  timeout: "6000000"  
+
+  
+#For Each batch size details
+for-each:
+  batchSize: "35"  
+  
+  
+
+#For the Environment identification for the email subject & body
+bppEnv: 'Prod'    

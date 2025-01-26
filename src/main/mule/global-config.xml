@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd 
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<http:listener-config name="HTTP_Listener_config"
+		doc:name="HTTP Listener config"
+		doc:id="a129fd09-4560-44e8-a1c1-6f83f914ce13">
+		<http:listener-connection
+			host="${https.host}" port="${https.port}" />
+	</http:listener-config>
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="59364a1c-99f0-496c-845c-39039c9e73b9"
+		file="properties\config-${mule.env}.yaml" />
+
+	<configuration doc:name="Configuration"
+		doc:id="8ab74a33-186f-4211-b0a8-1d29a0f23fd7"
+		defaultErrorHandler-ref="global-error-handler" />
+	<secure-properties:config
+		name="Secure_Properties_Config" doc:name="Secure Properties Config"
+		doc:id="73ad377b-60bb-40f8-9ca6-3c5466716255"
+		file="properties\config-secure-${mule.env}.yaml" key="${secure.key}" />
+	<global-property doc:name="Global Property"
+		doc:id="1fe6e0f2-6096-4908-9b4b-31404c94544c" name="mule.env"
+		value="${mule.env}" />
+	<global-property doc:name="Global Property"
+		doc:id="c968b0c1-d054-4296-a5c4-acd0a8331e8f" name="secure.key"
+		value="${secure.key}" />
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="f5350052-d7e1-4d5c-8ac9-a626a0f7328d"
+		file="properties\config-common.yaml" />
+	<http:request-config name="HTTP_Request_configuration_sage_100" doc:name="HTTP Request configuration" doc:id="0da1b2f1-d0ee-4a4f-bd31-e5dc3c3fe6f0" >
+		<http:request-connection host="${db.request.https.host}" port="${db.request.https.port}" protocol="${db.request.https.protocol}">
+			<reconnection >
+				<reconnect count="3" />
+			</reconnection>
+		</http:request-connection>
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration-salesforce" doc:name="HTTP Request configuration" doc:id="32cac62a-c79f-4606-8a78-a2fa29bcdeea" >
+		<http:request-connection protocol="${sfdc-request.https.protocol}" host="${sfdc-request.https.host}" port="${sfdc-request.https.port}" >
+			<reconnection >
+				<reconnect count="3" />
+			</reconnection>
+		</http:request-connection>
+	</http:request-config>
+	<os:object-store name="accountsLastModifiedDate" doc:name="Object store" doc:id="31c9666d-1a58-4cb4-80ad-52758fb86c59" maxEntries="1" entryTtl="12" entryTtlUnit="MINUTES" expirationInterval="12"/>
+</mule>

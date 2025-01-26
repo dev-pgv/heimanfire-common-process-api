@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<sub-flow name="heimanfire-order-subflow" doc:id="e6fa5040-daa2-444b-ad26-05a2ce64de96" >
+		<logger level="INFO" doc:name="Logger" doc:id="2e67ef2a-e8fa-43a3-b79b-6e728d396ad8" message="Started created or updated the records in sfdc - #[flow.name] executions has started-#[correlationId]-OrderData-#[now()]"/>
+		<os:retrieve doc:name="Retrieve" doc:id="532f1255-883c-4af3-b089-fa810d923b2c" key="orderLastModifiedDate" objectStore="accountsLastModifiedDate">
+			<os:default-value ><![CDATA[#[p('orderLastModifiedDate')]]]></os:default-value>
+		</os:retrieve>
+		<ee:transform doc:name="Set vars: requestPaths" doc:id="0754c1a1-7ea2-43c7-92b6-3f43bd05c219" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	orderByModifiedDate : payload
+}]]></ee:set-payload>
+
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="requestPaths" ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('db.request.https.order'),
+	"method" : p('db.request.https.order-method'),
+	
+}]]></ee:set-variable>
+				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
+import p from Mule
+output application/java
+---
+"orderData" ++ ' ' ++ p('heimanfireEnv')]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="common-request-sage-subflow" doc:id="6d33de2c-cd58-45bd-ae8d-9eea38f3c107" name="common-request-sage-subflow"/>
+		<ee:transform doc:name="Set vars: sfRequestforEachAccountList,  totalrecordCount" doc:id="4c19bc08-be97-42d2-8ee0-d6ae683a20d4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload default [] map ((item, index) -> {
+	"salesOrderNo": item.header.salesOrderNo,
+	"orderType": item.header.orderType,
+	"orderdate": (item.header.orderdate as Date) as String,
+	"arDivisionNo": item.header.arDivisionNo,
+	"customerNo": item.header.customerNo,
+	"shipToCode": item.header.shipToCode,
+	"shipToName": item.header.shipToName,
+	"confirmTo": item.header.confirmTo,
+	"emailAddress": item.header.emailAddress,
+	"shipToAddress1": item.header.shipToAddress1,
+	"shipToAddress2": item.header.shipToAddress2,
+	"shipToAddress3": item.header.shipToAddress3,
+	"shipToCity": item.header.shipToCity,
+	"shipToState": item.header.shipToState,
+	"shipToZIPCode": item.header.shipToZIPCode,
+	"shipToCountryCode": item.header.shipToCountryCode,
+	"customerPONo": item.header.customerPONo,
+	"orderTotal": item.header.orderTotal,
+	"billToName": item.header.billToName,
+	"billToAddress1": item.header.billToAddress1,
+	"billToAddress2": item.header.billToAddress2,
+	"billToAddress3": item.header.billToAddress3,
+	"billToCity": item.header.billToCity,
+	"billToState": item.header.billToState,
+	"billToCountryCode": item.header.billToCountryCode,
+	"billToZIPCode": item.header.billToZIPCode,
+	"status" : 'Activated'
+})]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
+output application/json
+---
+0]]></ee:set-variable>
+				<ee:set-variable variableName="sfOrderResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+			
+
+</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="e5e74190-889e-49e0-8083-b29df46bbd96" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="orderPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="f87e15e3-a964-4683-8fb0-efe2b7a6b5c9" >
+			<when expression="#[!isEmpty(payload)]">
+				<try doc:name="Try" doc:id="505dca52-718e-463c-a9b5-fea2a8f7fd7b" >
+					<foreach doc:name="For Each" doc:id="54b14296-1561-46e5-bf53-3ab0ebb167a8" batchSize="${for-each.upsertbatchSize}">
+					<ee:transform doc:name="set Vars : requestPaths,sfRequestAccountList" doc:id="cccbe0cd-5242-4948-8448-506be30fc582">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="recordCount"><![CDATA[%dw 2.0
+output application/json
+---
+sizeOf(payload)]]></ee:set-variable>
+							<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('sfdc-request.https.order'),
+	"method" : p('sfdc-request.https.products-method')
+}]]></ee:set-variable>
+						</ee:variables>
+				</ee:transform>
+					<flow-ref doc:name="common-request-salesforce-subflow" doc:id="ca700f28-1a9f-4141-b6ed-dd49f7e26e05" name="common-request-salesforce-subflow" />
+					<ee:transform doc:name="Transform Message" doc:id="95f1c33b-f394-436f-8c41-f79fd9aba0d1">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload.items]]></ee:set-payload>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="totalrecordCount"><![CDATA[%dw 2.0
+output application/json
+---
+vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<ee:transform doc:name="Transform Message" doc:id="9759f967-d703-487e-ab6d-9cc4319cd6dd">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map (item, index) -> {
+    success: item.successful as Boolean default false,
+    created: item.created as Boolean default false,
+    id: item.id,
+    error: if (item.successful == false) {
+        message: item.message,
+        statusCode: item.statusCode,
+        fields: item.payload.errors[0].fields default null
+    } else []
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<ee:transform doc:name="Set vars: sfAccountResponse" doc:id="25cb8134-35db-49f2-878e-f62675867169">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="sfOrderResponse"><![CDATA[%dw 2.0
+output application/json
+---
+(vars.sfOrderResponse default []) << payload]]></ee:set-variable>
+						
+
+</ee:variables>
+					</ee:transform>
+				</foreach>
+					<ee:transform doc:name="For each payload" doc:id="83cf147a-7410-4b88-8e3e-13c470491438">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+flatten(vars.sfOrderResponse)]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					<ee:transform doc:name="Transform Message" doc:id="52119f6c-1d9d-4876-a8c1-f0eb3a57c827">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+						<ee:set-variable variableName="orderErrors"><![CDATA[%dw 2.0
+output application/json
+---
+(vars.orderPayload map (account, index) -> {
+    salesOrderNo : account.salesOrderNo,
+    orderType : account.orderType,
+    upsertResult: {
+        success: payload[index].success,
+        created: payload[index].created,
+        salesforceId: payload[index].id,
+        errorMessage: payload[index].error.message default null,
+        errorFields: payload[index].error.fields default [],
+        errorCode: payload[index].error.statusCode default null
+    }
+}) filter ($.upsertResult.success == false)]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+					<ee:transform doc:name="Final payload" doc:id="25a87c49-c517-4573-9eb0-baaa54a44d9b">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"totalrecordCount": vars.totalrecordCount,
+	"Success": payload map ($) filter ($.success == true),
+	"Error": vars.orderErrors filter (!isEmpty($))
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					<error-handler >
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="4aea0661-9d0a-4149-b305-4f4155c07b6f" >
+							<ee:transform doc:name="Transform Message" doc:id="95228f56-208a-40d0-8f08-aa8fb10ed52c" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{	
+	"errorCode": error.errorCode,
+	"errorDescription": error.description,
+	"identifier": error.errorType.identifier,
+	"errorType": error.errorType,
+	"transactionId": correlationId,
+	"timeStamp": now() as DateTime
+}]]></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+							<logger level="INFO" doc:name="Logger" doc:id="02565511-8124-43b2-b4b7-fe946401b84c" message="====== Exception Occured #[payload] ================"/>
+						</on-error-continue>
+					</error-handler>
+				</try>
+			
+</when>
+			<otherwise >
+				<ee:transform doc:name="Default message" doc:id="65cd2371-ffec-4a16-ad7f-ff9823457010" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Status" : "Account data not found in AccountList"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<os:store doc:name="Store" doc:id="430a677f-e13a-4656-a080-308a3daf5761" key="orderStatusLastModifiedDate" objectStore="accountsLastModifiedDate">
+			<os:value ><![CDATA[#[(now() >> "UTC") as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"}]]]></os:value>
+		</os:store>
+		<logger level="INFO" doc:name="Final log message" doc:id="3eb28d5f-208f-4934-adb1-b6b148dad96f" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-OrdersData-#[now()]"/>
+	</sub-flow>
+	
+	</mule>

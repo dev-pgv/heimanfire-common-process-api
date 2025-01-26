@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	
+	<sub-flow name="heimanfire-accounts-creation-subflow" doc:id="8bd69908-fa31-4e78-b535-4b0ce33de722" >
+		<logger level="INFO" doc:name="Logger" doc:id="ecc7b9b4-960f-4a1f-be09-5bc855f5fc55" message="Started created or updated the records in sfdc - #[flow.name] executions has started-#[correlationId]-AccountData-#[now()]"/>
+		<os:retrieve doc:name="Retrieve" doc:id="7c1cd3da-8c9a-4b32-a15c-3f6966863f2b" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate">
+			<os:default-value ><![CDATA[#[%dw 2.0
+import p from Mule
+---
+p('accountsLastModifiedDate')]]]></os:default-value>
+		</os:retrieve>
+		<ee:transform doc:name="Set vars: requestPaths" doc:id="6c820287-b5ed-47fc-8ad5-8a922ab02ae8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	customerListByModifiedDate : payload
+}]]></ee:set-payload>
+
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="requestPaths" ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('db.request.https.accountlist'),
+	"method" : p('db.request.https.account-method'),
+	
+}]]></ee:set-variable>
+				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
+import p from Mule
+output application/java
+---
+"accountData" ++ ' ' ++ p('heimanfireEnv')]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="common-request-sage-subflow" doc:id="c9502df5-d10c-4e0a-9c67-ab8bc526e658" name="common-request-sage-subflow"/>
+		<ee:transform doc:name="Set vars: sfRequestforEachAccountList,  totalrecordCount" doc:id="d6fc62f4-9c1c-4e7b-a1cc-78298104e0ae" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
+output application/json
+---
+0]]></ee:set-variable>
+				<ee:set-variable variableName="sfAccountResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+			
+</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="ce152dba-01e1-44f7-a7cf-602413f61797" >
+			<when expression="#[!isEmpty(payload)]">
+				<try doc:name="Try" doc:id="8cadc340-6b6f-4f9f-86fd-14cd3830542b" >
+					<foreach doc:name="For Each" doc:id="ed7c880d-02f8-4949-b092-a8afc2fb3ae2" batchSize="${for-each.batchSize}">
+					<ee:transform doc:name="set Vars : requestPaths,sfRequestAccountList" doc:id="4cb09747-6b43-47f7-bc97-602cd0fe99b1">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="recordCount"><![CDATA[%dw 2.0
+output application/json
+---
+sizeOf(payload)]]></ee:set-variable>
+							<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('sfdc-request.https.account'),
+	"method" : p('sfdc-request.https.products-method')
+	
+}]]></ee:set-variable>
+						</ee:variables>
+				</ee:transform>
+					<flow-ref doc:name="common-request-salesforce-subflow" doc:id="33ac3219-94b2-41dd-8e7a-34fa0df2c147" name="common-request-salesforce-subflow" />
+					<ee:transform doc:name="set Vars: totalrecordCount, Incoming Response Structure" doc:id="8d210cfa-3eab-439b-a551-3c22e8d7040e">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+//Failed graph reques calls detials
+var graphRequestFailed = (payload.graphs filter($.isSuccessful ~= false)) map($.graphResponse.compositeResponse map($ - "httpHeaders"))
+
+//successed graph request calls details
+var graphRequestSuccss = (payload.graphs filter($.isSuccessful ~= true)).graphResponse.compositeResponse map($ map{
+	"id": $.body.id,
+	"success": $.body.success,
+	"httpStatusCode": $.httpStatusCode,
+	"referenceId": $.referenceId
+})
+---
+{
+	"Success": graphRequestSuccss,
+	"Error": graphRequestFailed
+}
+]]></ee:set-payload>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="totalrecordCount"><![CDATA[%dw 2.0
+output application/json
+---
+vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<ee:transform doc:name="Set vars: sfAccountResponse" doc:id="710e36ec-4121-462d-b7ce-e340cd99c325">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="sfAccountResponse"><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfAccountResponse << payload]]></ee:set-variable>
+						
+</ee:variables>
+					</ee:transform>
+				</foreach>
+					<ee:transform doc:name="For each payload" doc:id="cb42b773-7f66-4f4b-abbe-1ee0e024b861">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfAccountResponse]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					<ee:transform doc:name="Final payload" doc:id="2dc5f287-5826-4139-abb4-75efc980936d">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"totalrecordCount" : vars.totalrecordCount,
+	"Success": vars.sfAccountResponse.Success filter (!isEmpty($)),
+	"Error": vars.sfAccountResponse.Error filter (!isEmpty($))
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+					<error-handler >
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b137cd5d-648a-4903-9416-e935b96ee79c" >
+							<ee:transform doc:name="Transform Message" doc:id="1695c20f-cd8d-4407-8990-131217bc22ad" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{	
+	"errorCode": error.errorCode,
+	"errorDescription": error.description,
+	"identifier": error.errorType.identifier,
+	"errorType": error.errorType,
+	"transactionId": correlationId,
+	"timeStamp": now() as DateTime
+}]]></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+							<logger level="INFO" doc:name="Logger" doc:id="21ea2be3-32a5-409d-9fb8-c84b695e1bc7" message="====== Exception Occured #[payload] ================"/>
+						</on-error-continue>
+					</error-handler>
+				</try>
+			
+</when>
+			<otherwise >
+				<ee:transform doc:name="Default message" doc:id="d22ee59a-0fb7-4257-ae8a-e4ce3cfc0f7a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Status" : "Account data not found in AccountList"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<os:store doc:name="Store" doc:id="e6f8a808-e18b-4cc9-83b8-bd917c7febfe" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate">
+			<os:value ><![CDATA[#[(now() >> "UTC") as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"}]]]></os:value>
+		</os:store>
+		<logger level="INFO" doc:name="Final log message" doc:id="3a486c81-5ab1-4562-81e4-5ad4d67172b2" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-AccountsData-#[now()]"/>
+	</sub-flow>
+	</mule>

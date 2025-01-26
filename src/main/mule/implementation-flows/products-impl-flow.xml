@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<sub-flow name="heimanfire-products-creation-subflow" doc:id="63ca38cb-e52c-4212-aba0-d90f91ec3565" >
+		<logger level="INFO" doc:name="Logger" doc:id="ce0162ed-bf8e-4600-8691-92699b3c1119" message="Started created or updated the records in sfdc - #[flow.name] executions has started-#[correlationId]-ProductData-#[now()]"/>
+		<ee:transform doc:name="Set vars: requestPaths" doc:id="6e1096a9-9af3-4f53-9208-71dae158d189" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="requestPaths" ><![CDATA[%dw 2.0
+import p from Mule
+output application/java
+---
+{
+	"url" :  p('db.request.https.productlist'),
+	"method" : p('db.request.https.method')
+}]]></ee:set-variable>
+				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
+import p from Mule
+output application/java
+---
+"ProductsData" ++ ' ' ++ p('heimanfireEnv')]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="common-request-sage-subflow" doc:id="5d05bef7-8db8-4c8d-a9ab-5d72e76d289a" name="common-request-sage-subflow"/>
+		<ee:transform doc:name="Set vars: sfRequestforEachProductList,  totalrecordCount" doc:id="5aa3a0b0-227c-420c-a565-072870914a75" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(payload default [] map {
+	"found": $.found default '',
+	"itemCode":  trim($.itemCode) default '',
+	"itemCodeDesc": $.itemCodeDesc default '',
+	"productLine": $.productLine default '',
+	"productType": $.productType default '',
+	"inventoryCycle": $.inventoryCycle default '',
+	"standardUnitOfMeasure": $.standardUnitOfMeasure default '',
+	"valuation": $.valuation default '',
+	"procurementType": $.procurementType default '',
+	"standardUnitPrice" : $.standardUnitPrice as String default '',
+	"active" : "true"
+})]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
+output application/json
+---
+0]]></ee:set-variable>
+				<ee:set-variable variableName="sfProductResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="d5c9e820-cec8-4a73-867a-9eefdbdee6e5" >
+			<when expression="#[!isEmpty(payload)]">
+				<try doc:name="Try" doc:id="c3121d65-6aea-4eac-9a4d-eb5bc061338d" >
+					<foreach doc:name="For Each" doc:id="48dc1481-0743-4c45-beca-33d316168f2f" batchSize="${for-each.batchSize}">
+					<ee:transform doc:name="set Vars : requestPaths,sfRequestProductList" doc:id="dd38d3a7-fac7-4024-802c-d9b102f31b5a">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="recordCount"><![CDATA[%dw 2.0
+output application/json
+---
+sizeOf(payload)]]></ee:set-variable>
+							<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('sfdc-request.https.products'),
+	"method" : p('sfdc-request.https.products-method'),
+	
+}]]></ee:set-variable>
+						</ee:variables>
+				</ee:transform>
+					<flow-ref doc:name="common-request-salesforce-subflow" doc:id="186a43c0-d3ae-4f75-a5cc-8d1d8008f4ea" name="common-request-salesforce-subflow" />
+					<ee:transform doc:name="set Vars: totalrecordCount, Incoming Response Structure" doc:id="adafe891-9ae7-4111-bf5e-e288b6250175">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+
+//Failed graph reques calls detials
+var graphRequestFailed = (payload.graphs filter($.isSuccessful ~= false)) map($.graphResponse.compositeResponse map($ - "httpHeaders"))
+
+//successed graph request calls details
+var graphRequestSuccss = (payload.graphs filter($.isSuccessful ~= true)).graphResponse.compositeResponse map($ map{
+	"id": $.body.id,
+	"success": $.body.success,
+	"httpStatusCode": $.httpStatusCode,
+	"referenceId": $.referenceId
+})
+---
+{
+	"Success": graphRequestSuccss,
+	"Error": graphRequestFailed
+}
+]]></ee:set-payload>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="totalrecordCount"><![CDATA[%dw 2.0
+output application/json
+---
+vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<ee:transform doc:name="Set vars: sfCutomerResponse" doc:id="688e7cf7-5cab-48c7-953f-5602e2088518">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="sfProductResponse"><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfProductResponse << payload]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</foreach>
+					<!-- [STUDIO:"For each payload"]<ee:transform doc:name="For each payload" doc:id="094b58a7-5118-4460-91fd-dc9ce73647d3">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+vars.sfProductResponse&#93;&#93;></ee:set-payload>
+					</ee:message>
+				</ee:transform> [STUDIO] -->
+					<!-- [STUDIO:"Final payload"]<ee:transform doc:name="Final payload" doc:id="6e7acb33-37a2-45fd-ac3c-643c13f529dd">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+{
+	"totalrecordCount" : vars.totalrecordCount,
+	"Success": vars.sfProductResponse.Success filter (!isEmpty($)),
+	"Error": vars.sfProductResponse.Error filter (!isEmpty($))
+}&#93;&#93;></ee:set-payload>
+					</ee:message>
+				</ee:transform> [STUDIO] -->
+					<error-handler >
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="abc361a9-8867-4648-8cec-b8da9015916e" >
+							<ee:transform doc:name="Transform Message" doc:id="daaccd0f-c962-40fc-ae3a-a5fbeecf2ad9" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"errorCode": error.errorCode,
+	"errorDescription": error.description,
+	"identifier": error.errorType.identifier,
+	"errorType": error.errorType,
+	"transactionId": correlationId,
+	"timeStamp": now() as DateTime
+}]]></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+							<logger level="INFO" doc:name="Logger" doc:id="43272425-7e85-4260-9131-d1d5bc427649" message="====== Exception Occured #[payload] ================"/>
+						</on-error-continue>
+					</error-handler>
+				</try>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Default message" doc:id="d693797b-0eb5-4d01-8e1d-6bf19c3654b4" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Status" : "product data not found in productList"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Final log message" doc:id="ce73c9c9-d3cd-4721-9b96-e379afd47022" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-ProductData-#[now()]"/>
+	</sub-flow>
+</mule>

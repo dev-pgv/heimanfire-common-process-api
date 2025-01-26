@@ -1,0 +1,61 @@
+# Listener configuration
+https:
+  host: "0.0.0.0"
+  port: "8081"
+  path: "/*"
+#cron expression
+cron:
+  products: "0 0 1 ? * MON-FRI *"
+#heimanfire-sfdc-sys-api Listener configuration
+sfdc-request:
+  https:
+    products-method: "POST"
+    protocol: "HTTP"
+    host: "localhost"
+    port: "8083"
+    products: "/api/v1/products"
+    account : "/api/v1/account"
+    warehouseitemstock : "/api/v1/warehouseitemstock"      
+    order : "/api/v1/order" 
+    orderItem : "/api/v1/orderItem" 
+
+#heimanfire-db-sys-api Listener configuration
+db:
+  request:
+    https:
+      method: "GET"
+      account-method: "POST"
+      order-method : "POST"
+      protocol: "HTTP"
+      host: "localhost"
+      port: "8082"
+      productlist: "/api/v1/itemlist"
+      accountlist : "/api/v1/customerRecordList"
+      warehouse : "/api/v1/warehouseStockList"
+      order : "/api/v1/invoicedOrderList"
+
+
+#Request Timeout config
+http-request:
+  timeout: "6000000"  
+
+  
+#For Each batch size details
+for-each:
+  batchSize: "70" 
+  upsertbatchSize : "200" 
+#heimanfire-db-sys-api client details
+heimanfire:
+  db:
+    clientId: "244201dddb8c405c814684b7bc54db65" 
+
+#heimanfire-sfdc-sys-api client details
+heimanfire-sfdc:
+  clientId: "7c22a900b4594232a2fccf898c02e47c"  
+  
+#For the Environment identification for the email subject & body
+heimanfireEnv: 'local' 
+
+#last modified date
+accountsLastModifiedDate : "2022-07-01T16:12:01.929Z"   
+orderLastModifiedDate : "2022-07-01T16:12:01.929Z"  

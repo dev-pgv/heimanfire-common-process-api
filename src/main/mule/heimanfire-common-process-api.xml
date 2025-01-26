@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<flow name="scheduler-heimanfire-common-products-api" doc:id="cdbc568a-1e51-45af-9741-93e969c190d6">
+		<scheduler doc:name="Scheduler" doc:id="a1c9a699-c4ba-4bbd-a6fc-dca4deff35da" >
+			<scheduling-strategy >
+				<cron expression="0 0 22 1/1 * ? *" />
+			
+</scheduling-strategy>
+		</scheduler>
+		<!-- [STUDIO:"Listener"]<http:listener doc:name="Listener" doc:id="8497d8b1-55db-494d-928a-f8b38ac6b551" config-ref="HTTP_Listener_config" path="/test"/> [STUDIO] -->
+		<logger level="INFO" doc:name="Logger" doc:id="f15e1033-0402-4c18-8ff3-956a8e5bc6a0" message="===== Product flow Started ======="/>
+		<flow-ref doc:name="heimanfire-products-creation-subflow" doc:id="273291aa-721d-4f36-959d-bafa116c98b6" name="heimanfire-products-creation-subflow" />
+		<logger level="INFO" doc:name="Logger" doc:id="ca6d4b9b-85cc-45b4-8642-f7dec56e4b16" message="===== Product flow Ended ======="/>
+		<error-handler ref="global-error-handler" />
+	</flow>
+	<flow name="scheduler-heimanfire-common-accounts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc" initialState="stopped">
+		<scheduler doc:name="Scheduler" doc:id="07fa251b-4683-4c29-9c40-9960c8b21ab5" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="HOURS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="2a33df0d-6114-40c2-bddf-59355f2d9b46" message="===== Account flow Started =======" />
+		<flow-ref doc:name="heimanfire-accounts-creation-subflow" doc:id="d1284e37-881e-48c0-be9b-965fb56bb4bc" name="heimanfire-accounts-creation-subflow" />
+		<logger level="INFO" doc:name="Logger" doc:id="5cd72a01-6777-4959-84b5-b8439a26f76f" message="===== Account flow Ended =======" />
+	</flow>
+	<flow name="scheduler-heimanfire-warehouse-common-process-api" doc:id="5cbfe9b6-5a0b-4b51-98ef-2c123162afc6" initialState="stopped">
+		<scheduler doc:name="Scheduler" doc:id="7b9e9ffa-e978-4fea-bc8d-ee1d6e581894" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="50" timeUnit="HOURS" />
+			
+</scheduling-strategy>
+		</scheduler>
+		<!-- [STUDIO:"Listener"]<http:listener doc:name="Listener" doc:id="b16cf6fe-66ab-41c1-ab56-e132d55d986c" config-ref="HTTP_Listener_config" path="/test"/> [STUDIO] -->
+		<logger level="INFO" doc:name="Logger" doc:id="0403fe89-f2ba-4fd9-9cf1-49c1fb19f1a3" message="===== Warehouse flow Started ======="/>
+		<flow-ref doc:name="heimanfire-warehouse-creation-subflow" doc:id="ee57c6de-21f3-4492-aacc-b103d5dcddf3" name="heimanfire-warehouse-creation-subflow"/>
+		<logger level="INFO" doc:name="Logger" doc:id="058062f3-3530-4c6e-ae4d-f30337f8554a" message="===== Warehouse flow Ended ======="/>
+		<error-handler ref="global-error-handler" />
+	</flow>
+	<flow name="scheduler-heimanfire-common-orders-apiFlow" doc:id="856cf9a3-a32d-483e-ac76-70ec9bf14ae3" initialState="stopped">
+		<!-- [STUDIO:"Scheduler"]<scheduler doc:name="Scheduler" doc:id="83bde8f5-5d3c-4918-baf3-be0441485578" >
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</scheduler> [STUDIO] -->
+		<logger level="INFO" doc:name="Logger" doc:id="08e63309-7e0c-4792-ad68-d8d48372e989" message="===== Order flow Started =======" />
+		<flow-ref doc:name="heimanfire-order-subflow" doc:id="c691c666-eb93-4a67-baaa-3cbcd8e453ff" name="heimanfire-order-subflow" />
+		<logger level="INFO" doc:name="Logger" doc:id="dabd40fa-4e6d-4e95-9000-0b08d6531a4f" message="===== Order flow Ended =======" />
+	</flow>
+	<flow name="scheduler-heimanfire-common-orderlines-apiFlow" doc:id="bf953255-9c81-465b-8917-ec25c236b744" initialState="stopped">
+		<!-- [STUDIO:"Scheduler"]<scheduler doc:name="Scheduler" doc:id="52a5a6aa-76cd-41eb-bea4-21d278a5b9e2" >
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</scheduler> [STUDIO] -->
+		<logger level="INFO" doc:name="Logger" doc:id="cc3abde2-5878-4019-babe-a8613a8c1f26" message="===== OrderItem flow Started =======" />
+		<flow-ref doc:name="heimanfire-orderLine-subflow" doc:id="38197cdf-a240-4029-bbf2-b3109717c249" name="heimanfire-orderLine-subflow" />
+		<logger level="INFO" doc:name="Logger" doc:id="8f0b590c-6723-4674-90d0-8b63f6770938" message="===== OrderItem flow Ended =======" />
+	</flow>
+
+</mule>

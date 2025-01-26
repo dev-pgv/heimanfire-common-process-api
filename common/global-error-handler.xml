@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<error-handler name="global-error-handler" doc:id="82b45945-5b3e-4f74-8ec6-eea96766e489" >
+		<on-error-propagate type="APIKIT:BAD_REQUEST" doc:name="propagate-bad-request-error">
+                <ee:transform doc:name="Build error msg">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": {
+		"errorCode": p('common.errors.error-code-400'),
+		"errorMessage": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[400]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="8b1779cc-cbd6-4218-9d14-e11976c1ba4e" name="common-email-subflow" target="emailResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND" doc:name="propagate-not-found-error">
+                <ee:transform doc:name="Build error msg">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": {
+		"errorCode": p('common.errors.error-code-404'),
+		"errorMessage": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="9484a991-7b8d-41ef-8d28-f11c143d95cc" name="common-email-subflow" target="emailResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED" doc:name="propagate-method-not-allowed-error">
+                <ee:transform doc:name="Build error msg">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": {
+		"errorCode": p('common.errors.error-code-405'),
+		"errorMessage": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[405]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="01436275-ffa3-4d70-a174-d5752257dfe9" name="common-email-subflow" target="emailResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE" doc:name="propagate-not-acceptable-error">
+                <ee:transform doc:name="Build error msg">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": {
+		"errorCode": p('common.errors.error-code-406'),
+		"errorMessage": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[406]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="e91ad87a-2258-4349-828a-f7b7e71430aa" name="common-email-subflow" target="emailResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE" doc:name="propagate-unsupported-media-type-error">
+                <ee:transform doc:name="Build error msg">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": {
+		"errorCode": p('common.errors.error-code-415'),
+		"errorMessage": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[415]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="1252ab85-54a8-4856-ab4b-89eb6022d572" name="common-email-subflow" target="emailResponse"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED" doc:name="propagate-not-implemented-error">
+                <ee:transform doc:name="Build error msg">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": {
+		"errorCode": p('common.errors.error-code-501'),
+		"errorMessage": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[501]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="0cae91fa-d645-4d30-952a-78741428e62d" name="common-email-subflow" target="emailResponse"/>
+            
+</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="propagate-any-error" doc:id="1a928fa4-7b1d-48aa-9062-962cf2a63b4e" type="ANY">
+			<ee:transform doc:name="Build error msg" doc:id="22dba44a-83a3-42aa-939e-f91d2b1ed9de" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": if ( !isEmpty(payload.errorMessage) ) (vars.error_object) else
+	
+	{
+		"errorCode": p('common.errors.error-code-500'),
+		"errorDescription": error.description,
+		"transactionId": correlationId,
+		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
+		"timeStamp": now()
+	}
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[501]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<flow-ref doc:name="common-email-subflow" doc:id="bbeccfe3-f199-4d45-b38a-6340910a8260" name="common-email-subflow" target="emailResponse"/>
+		</on-error-propagate>
+	</error-handler>
+	<sub-flow name="common-email-subflow" doc:id="ddf839de-2266-493d-be3b-a2c5880e7d5f" >
+		<logger level="INFO" doc:name="Mail Log" doc:id="1118fe99-3840-488d-8874-f0af511c7e7b" message='"Email sent Notification" : flowname-#[flow.name]-#[correlationId]-ProductsData-#[now()]'/>
+		<ee:transform doc:name="Mapping" doc:id="076813ec-3ac5-49f1-9e77-62b23790abbc" >
+			<ee:message >
+				<ee:set-payload resource="dwl/mailSendFormat.dwl" />
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="errorCount" ><![CDATA[%dw 2.0
+output application/json
+var create = sizeOf(flatten(payload.Success) flatMap (
+    ($[0])
+) filter ((item, index) -> item.httpStatusCode ~= 201))  default 0
+var upset = sizeOf(flatten(payload.Success) flatMap (
+    ($[0])
+) filter ((item, index) -> item.httpStatusCode ~= 200))  default 0
+---
+{
+	"successRecors": (vars.totalrecordCount default 0)- (sizeOf(payload.Error flatMap ($)) default 0),
+	"failureRecords": sizeOf(payload.Error flatMap ($)) default 0,
+	"Created Records": create,
+	"Updated Records": upset
+}
+
+
+
+
+]]></ee:set-variable>
+				<ee:set-variable variableName="fileName" ><![CDATA[%dw 2.0
+output application/json
+---
+if(!isEmpty(vars.Report)) vars.fileName else "Api-Error-Report"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;if(payload.'Api-Error-Report'?)(&#10;	&quot;There was an error with a transaction. Please find attached.&quot;&#10;)&#10;else&#10;&quot;Please find $(vars.fileName) attachement for your review. The report includes detailed information about the $(vars.fileType).&lt;br&gt;Summary of the Date:&lt;br&gt;Date and Time: $((now() &gt;&gt; &quot;UTC&quot;) as String{format:&quot;yyyy-MM-dd hh:mm:ss a z&quot;})&lt;br&gt;Total Records processed: $(vars.errorCount.successRecors + vars.errorCount.failureRecords)&lt;br&gt;Count of Success Records: $(vars.errorCount.successRecors)&lt;br&gt;1) Created Records Count: $(vars.errorCount.&quot;Created Records&quot;)&lt;br&gt;2) Updated Records Count: $(vars.errorCount.&quot;Updated Records&quot;)&lt;br&gt;Count Of Failure Records: $(vars.errorCount.failureRecords)&lt;br&gt;&lt;br&gt;Thank you for your assistance.&quot;]" doc:name="Set vars: contentData" doc:id="0a2b8919-d607-40ec-a161-363976c53ea2" variableName="contentData"/>
+		<ee:transform doc:name="xlsx payload mapping" doc:id="0da72d66-aaba-4663-9274-ac7e3828daae" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xlsx
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<until-successful maxRetries="#[p('untilSuccess.retries')]" doc:name="Until Successful" doc:id="ad8aa5fc-f0dd-43a1-bb44-e2850c8aab30" millisBetweenRetries="#[p('untilSuccess.timeInterval')]">
+			<email:send doc:name="Mail Send" doc:id="11e38f50-7b14-4fb8-8696-c24fce3b2e51" config-ref="Email_SMTP" fromAddress="#[p('smtp.from-address')]" subject='#[vars.fileType ++ "-" ++ "Report"]'>
+			<email:to-addresses>
+				<email:to-address value="${smtp.to-address}" />
+			</email:to-addresses>
+			<email:body contentType="${smtp.content-type}">
+				<email:content><![CDATA[#[vars.contentData]]]></email:content>
+			</email:body>
+			<email:attachments><![CDATA[#[{
+	"$((vars.fileName)++ "-" ++ (now() as String {format: 'yyyy-MM-dd'})).xlsx" : payload
+}]]]></email:attachments>
+		</email:send>
+		</until-successful>
+	</sub-flow>
+</mule>
