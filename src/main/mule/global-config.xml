@@ -61,4 +61,11 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 		</http:request-connection>
 	</http:request-config>
 	<os:object-store name="accountsLastModifiedDate" doc:name="Object store" doc:id="31c9666d-1a58-4cb4-80ad-52758fb86c59" maxEntries="1" entryTtl="12" entryTtlUnit="MINUTES" expirationInterval="12"/>
+	<email:smtp-config name="Email_SMTP_Gmail" doc:name="Email SMTP" doc:id="53b57592-8975-4edc-9943-a26af136cc1d" >
+		<email:smtp-connection host="smtp.gmail.com" port="587" password="mrgbjcyplvvohkdf" user="mulesoft.integration.heimanfire@gmail.com">
+			<email:properties >
+				<email:property key="mail.smtp.starttls.enable" value="true" />
+			</email:properties>
+		</email:smtp-connection>
+	</email:smtp-config>
 </mule>

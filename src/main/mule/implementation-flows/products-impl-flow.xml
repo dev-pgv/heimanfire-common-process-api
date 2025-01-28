@@ -125,26 +125,26 @@ vars.sfProductResponse << payload]]></ee:set-variable>
 						</ee:variables>
 					</ee:transform>
 				</foreach>
-					<!-- [STUDIO:"For each payload"]<ee:transform doc:name="For each payload" doc:id="094b58a7-5118-4460-91fd-dc9ce73647d3">
+					<ee:transform doc:name="For each payload" doc:id="094b58a7-5118-4460-91fd-dc9ce73647d3">
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
-&#45;&#45;-
-vars.sfProductResponse&#93;&#93;></ee:set-payload>
+---
+vars.sfProductResponse]]></ee:set-payload>
 					</ee:message>
-				</ee:transform> [STUDIO] -->
-					<!-- [STUDIO:"Final payload"]<ee:transform doc:name="Final payload" doc:id="6e7acb33-37a2-45fd-ac3c-643c13f529dd">
+				</ee:transform>
+					<ee:transform doc:name="Final payload" doc:id="6e7acb33-37a2-45fd-ac3c-643c13f529dd">
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
-&#45;&#45;-
+---
 {
 	"totalrecordCount" : vars.totalrecordCount,
 	"Success": vars.sfProductResponse.Success filter (!isEmpty($)),
 	"Error": vars.sfProductResponse.Error filter (!isEmpty($))
-}&#93;&#93;></ee:set-payload>
+}]]></ee:set-payload>
 					</ee:message>
-				</ee:transform> [STUDIO] -->
+				</ee:transform>
 					<error-handler >
 						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="abc361a9-8867-4648-8cec-b8da9015916e" >
 							<ee:transform doc:name="Transform Message" doc:id="daaccd0f-c962-40fc-ae3a-a5fbeecf2ad9" >
@@ -178,6 +178,38 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Error Logger" doc:id="e20d4a9b-2c16-4aa0-9072-1cda1d4c33a2" message="The following Products has failed with Errors while sending into Salesforce : #[payload.Error]"/>
+		<choice doc:name="Choice" doc:id="5dc854b2-9214-4ee7-9adc-a92ebe87b524">
+			<when expression="#[sizeOf(payload.Error) &gt; 0]">
+				<async doc:name="Async" doc:id="b1fc7f9d-2f5a-48d8-b7f8-e8e990c3386d">
+					<try doc:name="Try" doc:id="e6cdb09f-416b-400e-9c7f-ee2ef74c925a">
+						<email:send doc:name="Send" doc:id="7caaf900-2deb-4b3a-9dd1-e6e52b2c2d7d" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Products-Impl-Flow"]'>
+							<email:to-addresses>
+								<email:to-address value="nishith.kumar@prowesssoft.com" />
+							</email:to-addresses>
+							<email:body contentType="text/plain">
+								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+							</email:body>
+							<email:attachments><![CDATA[#[%dw 2.0
+output application/json
+var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
+---
+{
+	("ProductErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(payload.Error, "application/json")
+}]]]></email:attachments>
+						</email:send>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="1367b403-4add-4677-acc9-d2111fb91b88">
+								<logger level="INFO" doc:name="Logger" doc:id="13295a0f-c69b-4fe1-a6fd-5ef6d57e3e7e" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</async>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Default Logger" doc:id="0f3250ae-e39a-4b6a-ac0a-ecc4bfa6d27d" message="=====No Errors in Salesforce Accounts=====" />
 			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="Final log message" doc:id="ce73c9c9-d3cd-4721-9b96-e379afd47022" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-ProductData-#[now()]"/>

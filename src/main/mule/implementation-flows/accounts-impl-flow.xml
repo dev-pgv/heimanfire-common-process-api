@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:os="http://www.mulesoft.org/schema/mule/os"
-	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
 	
 	<sub-flow name="heimanfire-accounts-creation-subflow" doc:id="8bd69908-fa31-4e78-b535-4b0ce33de722" >
 		<logger level="INFO" doc:name="Logger" doc:id="ecc7b9b4-960f-4a1f-be09-5bc855f5fc55" message="Started created or updated the records in sfdc - #[flow.name] executions has started-#[correlationId]-AccountData-#[now()]"/>
@@ -151,6 +152,7 @@ output application/json
 				</ee:transform>
 					<error-handler >
 						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b137cd5d-648a-4903-9416-e935b96ee79c" >
+							<logger level="INFO" doc:name="Logger" doc:id="21ea2be3-32a5-409d-9fb8-c84b695e1bc7" message="====== Exception Occured #[payload] ================" />
 							<ee:transform doc:name="Transform Message" doc:id="1695c20f-cd8d-4407-8990-131217bc22ad" >
 								<ee:message >
 									<ee:set-payload ><![CDATA[%dw 2.0
@@ -166,7 +168,6 @@ output application/json
 }]]></ee:set-payload>
 								</ee:message>
 							</ee:transform>
-							<logger level="INFO" doc:name="Logger" doc:id="21ea2be3-32a5-409d-9fb8-c84b695e1bc7" message="====== Exception Occured #[payload] ================"/>
 						</on-error-continue>
 					</error-handler>
 				</try>
@@ -183,6 +184,38 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Error Logger" doc:id="02c70ccc-67a6-45b2-a516-4ea288f8f6f8" message="The following Accounts has failed with Errors while sending into Salesforce : #[payload.Error]"/>
+		<choice doc:name="Choice" doc:id="a76d0715-936f-4649-8b96-543b7e2aaddf">
+			<when expression="#[sizeOf(payload.Error) &gt; 0]">
+				<async doc:name="Async" doc:id="2a12b07d-c17a-4614-b279-5763757d4a61">
+					<try doc:name="Try" doc:id="aa52faa9-e5d3-4ba4-b4eb-4c5eeb694c72">
+						<email:send doc:name="Send" doc:id="47ea71ca-9916-4f07-9917-70a8c3cf058a" config-ref="Email_SMTP_Gmail" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Accounts-Impl-Flow"]' fromAddress="mulesoft.integration.heimanfire@gmail.com">
+							<email:to-addresses>
+								<email:to-address value="nishith.kumar@prowesssoft.com" />
+							</email:to-addresses>
+							<email:body contentType="text/plain">
+								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+							</email:body>
+							<email:attachments><![CDATA[#[%dw 2.0
+output application/json
+var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
+---
+{
+	("AccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(payload.Error, "application/json")
+}]]]></email:attachments>
+						</email:send>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="5acde085-47e2-4071-bb21-16b23128d473">
+								<logger level="INFO" doc:name="Logger" doc:id="b2d6ec89-2898-43da-88b6-b0e46e95ab66" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</async>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Default Logger" doc:id="a8910d35-39fb-4e5b-becb-f28957fe5200" message="=====No Errors in Salesforce Accounts=====" />
 			</otherwise>
 		</choice>
 		<os:store doc:name="Store" doc:id="e6f8a808-e18b-4cc9-83b8-bd917c7febfe" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate">

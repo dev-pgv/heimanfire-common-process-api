@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
 	<sub-flow name="heimanfire-warehouse-creation-subflow" doc:id="5b664a89-09fb-498e-b84e-a0c9dc1509c7" >
 		<logger level="INFO" doc:name="Logger" doc:id="a22cdaeb-fed0-46a0-b8e0-e3d6b6dfae28" message="Started created or updated the records in sfdc - #[flow.name] executions has started-#[correlationId]-WarehouseData-#[now()]"/>
 		<ee:transform doc:name="Set vars: requestPaths" doc:id="d2226d63-4647-4bb0-9498-a27f156f9689" >
@@ -241,6 +242,38 @@ output application/json
 }]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Error Logger" doc:id="8e0c9ad4-9bfd-421e-b630-99f6e8b8c14e" message="The following Warehouse has failed with Errors while sending into Salesforce : #[payload.Error]"/>
+		<choice doc:name="Choice1" doc:id="36023d99-a17f-43d0-a4bd-4a12768c93ab">
+			<when expression="#[sizeOf(payload.Error) &gt; 0]">
+				<async doc:name="Async" doc:id="dd912583-761a-4432-84d4-07c0c636cd36">
+					<try doc:name="Try" doc:id="3d1454d4-b260-4675-b92a-dca2b893ca7a">
+						<email:send doc:name="Send" doc:id="87110688-6704-4b5c-9b69-49914f6df39f" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Warehouse-Impl-Flow"]'>
+							<email:to-addresses>
+								<email:to-address value="nishith.kumar@prowesssoft.com" />
+							</email:to-addresses>
+							<email:body contentType="text/plain">
+								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+							</email:body>
+							<email:attachments><![CDATA[#[%dw 2.0
+output application/json
+var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
+---
+{
+	("WarehouseErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(payload.Error, "application/json")
+}]]]></email:attachments>
+						</email:send>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="f19908aa-712c-4169-b6f6-c7cd8bee1229">
+								<logger level="INFO" doc:name="Logger" doc:id="21e93155-90ff-4554-8337-a770bbe84ad5" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</async>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Default Logger" doc:id="c066c4ad-4f82-4200-a4b4-a10f73f9d371" message="=====No Errors in Salesforce Accounts=====" />
 			</otherwise>
 		</choice>
 		<logger level="INFO" doc:name="Final log message" doc:id="2f8f4deb-ccd3-4b02-b0bf-78d7b9627234" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-WarehouseData-#[now()]"/>
