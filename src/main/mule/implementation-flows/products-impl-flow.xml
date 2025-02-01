@@ -20,18 +20,13 @@ output application/java
 	"url" :  p('db.request.https.productlist'),
 	"method" : p('db.request.https.method')
 }]]></ee:set-variable>
-				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
-import p from Mule
-output application/java
----
-"ProductsData" ++ ' ' ++ p('heimanfireEnv')]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="common-request-sage-subflow" doc:id="5d05bef7-8db8-4c8d-a9ab-5d72e76d289a" name="common-request-sage-subflow"/>
-		<ee:transform doc:name="Set vars: sfRequestforEachProductList,  totalrecordCount" doc:id="5aa3a0b0-227c-420c-a565-072870914a75" >
+		<ee:transform doc:name="Set Payload sfProductResponse" doc:id="5aa3a0b0-227c-420c-a565-072870914a75" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
+output application/java
 ---
 (payload default [] map {
 	"found": $.found default '',
@@ -48,108 +43,51 @@ output application/json
 })]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
-				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
-output application/json
----
-0]]></ee:set-variable>
 				<ee:set-variable variableName="sfProductResponse" ><![CDATA[%dw 2.0
-output application/json
+output application/java
 ---
 []]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<choice doc:name="Choice" doc:id="d5c9e820-cec8-4a73-867a-9eefdbdee6e5" >
-			<when expression="#[!isEmpty(payload)]">
-				<try doc:name="Try" doc:id="c3121d65-6aea-4eac-9a4d-eb5bc061338d" >
-					<foreach doc:name="For Each" doc:id="48dc1481-0743-4c45-beca-33d316168f2f" batchSize="${for-each.batchSize}">
-					<ee:transform doc:name="set Vars : requestPaths,sfRequestProductList" doc:id="dd38d3a7-fac7-4024-802c-d9b102f31b5a">
+		<ee:transform doc:name="set Vars : requestPaths,sfRequestProductList" doc:id="dd38d3a7-fac7-4024-802c-d9b102f31b5a">
 					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
 					</ee:message>
 						<ee:variables>
-							<ee:set-variable variableName="recordCount"><![CDATA[%dw 2.0
-output application/json
----
-sizeOf(payload)]]></ee:set-variable>
 							<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
 output application/java
 ---
 {
 	"url" : p('sfdc-request.https.products'),
-	"method" : p('sfdc-request.https.products-method'),
-	
+	"method" : p('sfdc-request.https.products-method')
 }]]></ee:set-variable>
 						</ee:variables>
 				</ee:transform>
-					<flow-ref doc:name="common-request-salesforce-subflow" doc:id="186a43c0-d3ae-4f75-a5cc-8d1d8008f4ea" name="common-request-salesforce-subflow" />
-					<ee:transform doc:name="set Vars: totalrecordCount, Incoming Response Structure" doc:id="adafe891-9ae7-4111-bf5e-e288b6250175">
-						<ee:message>
-							<ee:set-payload><![CDATA[%dw 2.0
-output application/json
-
-//Failed graph reques calls detials
-var graphRequestFailed = (payload.graphs filter($.isSuccessful ~= false)) map($.graphResponse.compositeResponse map($ - "httpHeaders"))
-
-//successed graph request calls details
-var graphRequestSuccss = (payload.graphs filter($.isSuccessful ~= true)).graphResponse.compositeResponse map($ map{
-	"id": $.body.id,
-	"success": $.body.success,
-	"httpStatusCode": $.httpStatusCode,
-	"referenceId": $.referenceId
-})
----
-{
-	"Success": graphRequestSuccss,
-	"Error": graphRequestFailed
-}
-]]></ee:set-payload>
-						</ee:message>
-						<ee:variables>
-							<ee:set-variable variableName="totalrecordCount"><![CDATA[%dw 2.0
+		<foreach doc:name="For Each" doc:id="48dc1481-0743-4c45-beca-33d316168f2f" batchSize="${for-each.batchSize}">
+					<try doc:name="Try" doc:id="c3121d65-6aea-4eac-9a4d-eb5bc061338d">
+					<ee:transform doc:name="Set Payload" doc:id="0c211fb7-3faa-4682-b02d-4e69dc5524d4" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
-						</ee:variables>
-					</ee:transform>
-					<ee:transform doc:name="Set vars: sfCutomerResponse" doc:id="688e7cf7-5cab-48c7-953f-5602e2088518">
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="common-request-salesforce-subflow" doc:id="186a43c0-d3ae-4f75-a5cc-8d1d8008f4ea" name="common-request-salesforce-subflow" />
+				<ee:transform doc:name="Set vars: sfCutomerResponse" doc:id="688e7cf7-5cab-48c7-953f-5602e2088518">
 						<ee:message>
 						</ee:message>
 						<ee:variables>
 							<ee:set-variable variableName="sfProductResponse"><![CDATA[%dw 2.0
 output application/json
 ---
-vars.sfProductResponse << payload]]></ee:set-variable>
+vars.sfProductResponse ++ payload]]></ee:set-variable>
 						</ee:variables>
 					</ee:transform>
-				</foreach>
-					<ee:transform doc:name="For each payload" doc:id="094b58a7-5118-4460-91fd-dc9ce73647d3">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-vars.sfProductResponse]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-					<ee:transform doc:name="Final payload" doc:id="6e7acb33-37a2-45fd-ac3c-643c13f529dd">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-	"totalrecordCount" : vars.totalrecordCount,
-	"Success": vars.sfProductResponse.Success filter (!isEmpty($)),
-	"Error": vars.sfProductResponse.Error filter (!isEmpty($))
-}]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-					<error-handler >
-						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="abc361a9-8867-4648-8cec-b8da9015916e" >
-							<ee:transform doc:name="Transform Message" doc:id="daaccd0f-c962-40fc-ae3a-a5fbeecf2ad9" >
-								<ee:message >
-									<ee:set-payload ><![CDATA[%dw 2.0
+				<error-handler>
+						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="abc361a9-8867-4648-8cec-b8da9015916e">
+							<ee:transform doc:name="Transform Message" doc:id="daaccd0f-c962-40fc-ae3a-a5fbeecf2ad9">
+								<ee:message>
+									<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
@@ -162,27 +100,24 @@ output application/json
 }]]></ee:set-payload>
 								</ee:message>
 							</ee:transform>
-							<logger level="INFO" doc:name="Logger" doc:id="43272425-7e85-4260-9131-d1d5bc427649" message="====== Exception Occured #[payload] ================"/>
+							<logger level="INFO" doc:name="Logger" doc:id="43272425-7e85-4260-9131-d1d5bc427649" message="====== Exception Occured #[payload] ================" />
 						</on-error-continue>
 					</error-handler>
 				</try>
-			</when>
-			<otherwise >
-				<ee:transform doc:name="Default message" doc:id="d693797b-0eb5-4d01-8e1d-6bf19c3654b4" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
+				</foreach>
+		<ee:transform doc:name="Set errorItems" doc:id="6e7acb33-37a2-45fd-ac3c-643c13f529dd">
+					<ee:message>
+					</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="errorItems"><![CDATA[%dw 2.0
 output application/json
 ---
-{
-	"Status" : "product data not found in productList"
-}]]></ee:set-payload>
-					</ee:message>
+vars.sfProductResponse filter $.isRequestSuccessful == false]]></ee:set-variable>
+						</ee:variables>
 				</ee:transform>
-			</otherwise>
-		</choice>
-		<logger level="INFO" doc:name="Error Logger" doc:id="e20d4a9b-2c16-4aa0-9072-1cda1d4c33a2" message="The following Products has failed with Errors while sending into Salesforce : #[payload.Error]"/>
+		<logger level="INFO" doc:name="Error Logger" doc:id="e20d4a9b-2c16-4aa0-9072-1cda1d4c33a2" message="The following Products has failed with Errors while sending into Salesforce : #[vars.errorItems]"/>
 		<choice doc:name="Choice" doc:id="5dc854b2-9214-4ee7-9adc-a92ebe87b524">
-			<when expression="#[sizeOf(payload.Error) &gt; 0]">
+			<when expression="#[sizeOf(vars.errorItems) &gt; 0]">
 				<async doc:name="Async" doc:id="b1fc7f9d-2f5a-48d8-b7f8-e8e990c3386d">
 					<try doc:name="Try" doc:id="e6cdb09f-416b-400e-9c7f-ee2ef74c925a">
 						<email:send doc:name="Send" doc:id="7caaf900-2deb-4b3a-9dd1-e6e52b2c2d7d" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Products-Impl-Flow"]'>
@@ -197,7 +132,7 @@ output application/json
 var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
 ---
 {
-	("ProductErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(payload.Error, "application/json")
+	("ProductErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.errorItems, "application/json")
 }]]]></email:attachments>
 						</email:send>
 						<error-handler>
