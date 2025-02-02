@@ -7,20 +7,19 @@
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-	<flow name="scheduler-heimanfire-common-products-api" doc:id="cdbc568a-1e51-45af-9741-93e969c190d6">
+	<flow name="scheduler-heimanfire-common-products-api" doc:id="cdbc568a-1e51-45af-9741-93e969c190d6" initialState="stopped">
 		<scheduler doc:name="Scheduler" doc:id="a1c9a699-c4ba-4bbd-a6fc-dca4deff35da" >
 			<scheduling-strategy >
 				<cron expression="0 0 22 1/1 * ? *" />
 			
 </scheduling-strategy>
 		</scheduler>
-		<!-- [STUDIO:"Listener"]<http:listener doc:name="Listener" doc:id="8497d8b1-55db-494d-928a-f8b38ac6b551" config-ref="HTTP_Listener_config" path="/test"/> [STUDIO] -->
 		<logger level="INFO" doc:name="Logger" doc:id="f15e1033-0402-4c18-8ff3-956a8e5bc6a0" message="===== Product flow Started ======="/>
 		<flow-ref doc:name="heimanfire-products-creation-subflow" doc:id="273291aa-721d-4f36-959d-bafa116c98b6" name="heimanfire-products-creation-subflow" />
 		<logger level="INFO" doc:name="Logger" doc:id="ca6d4b9b-85cc-45b4-8642-f7dec56e4b16" message="===== Product flow Ended ======="/>
 		<error-handler ref="global-error-handler" />
 	</flow>
-	<flow name="scheduler-heimanfire-common-accounts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc" initialState="stopped">
+	<flow name="scheduler-heimanfire-common-accounts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc">
 		<scheduler doc:name="Scheduler" doc:id="07fa251b-4683-4c29-9c40-9960c8b21ab5" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="10" timeUnit="HOURS"/>
@@ -37,7 +36,6 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 			
 </scheduling-strategy>
 		</scheduler>
-		<!-- [STUDIO:"Listener"]<http:listener doc:name="Listener" doc:id="b16cf6fe-66ab-41c1-ab56-e132d55d986c" config-ref="HTTP_Listener_config" path="/test"/> [STUDIO] -->
 		<logger level="INFO" doc:name="Logger" doc:id="0403fe89-f2ba-4fd9-9cf1-49c1fb19f1a3" message="===== Warehouse flow Started ======="/>
 		<flow-ref doc:name="heimanfire-warehouse-creation-subflow" doc:id="ee57c6de-21f3-4492-aacc-b103d5dcddf3" name="heimanfire-warehouse-creation-subflow"/>
 		<logger level="INFO" doc:name="Logger" doc:id="058062f3-3530-4c6e-ae4d-f30337f8554a" message="===== Warehouse flow Ended ======="/>

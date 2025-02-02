@@ -10,11 +10,14 @@ cron:
 sfdc-request:
   https:
     products-method: "POST"
+    accounts-method: "POST"
+    contacts-method: "POST"
     protocol: "HTTP"
     host: "localhost"
     port: "8083"
     products: "/api/v1/products"
     account : "/api/v1/account"
+    contact : "/api/v1/contact"
     warehouseitemstock : "/api/v1/warehouseitemstock"      
     order : "/api/v1/order" 
     orderItem : "/api/v1/orderItem" 

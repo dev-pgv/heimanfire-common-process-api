@@ -9,8 +9,8 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
 	
 	<sub-flow name="heimanfire-accounts-creation-subflow" doc:id="8bd69908-fa31-4e78-b535-4b0ce33de722" >
-		<logger level="INFO" doc:name="Logger" doc:id="ecc7b9b4-960f-4a1f-be09-5bc855f5fc55" message="Started created or updated the records in sfdc - #[flow.name] executions has started-#[correlationId]-AccountData-#[now()]"/>
-		<os:retrieve doc:name="Retrieve" doc:id="7c1cd3da-8c9a-4b32-a15c-3f6966863f2b" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate">
+		<logger level="INFO" doc:name="Logger" doc:id="ecc7b9b4-960f-4a1f-be09-5bc855f5fc55" message="Accounts and Contacts sync from Sage to Salesforce started"/>
+		<os:retrieve doc:name="Retrieve" doc:id="7c1cd3da-8c9a-4b32-a15c-3f6966863f2b" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate" target="accountsLastModifiedDate">
 			<os:default-value ><![CDATA[#[%dw 2.0
 import p from Mule
 ---
@@ -21,9 +21,8 @@ p('accountsLastModifiedDate')]]]></os:default-value>
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-{
-	customerListByModifiedDate : payload
-}]]></ee:set-payload>
+ vars.accountsLastModifiedDate
+]]></ee:set-payload>
 
 			</ee:message>
 			<ee:variables >
@@ -35,127 +34,106 @@ output application/java
 	"method" : p('db.request.https.account-method'),
 	
 }]]></ee:set-variable>
-				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
-import p from Mule
-output application/java
----
-"accountData" ++ ' ' ++ p('heimanfireEnv')]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="common-request-sage-subflow" doc:id="c9502df5-d10c-4e0a-9c67-ab8bc526e658" name="common-request-sage-subflow"/>
-		<ee:transform doc:name="Set vars: sfRequestforEachAccountList,  totalrecordCount" doc:id="d6fc62f4-9c1c-4e7b-a1cc-78298104e0ae" >
+		<ee:transform doc:name="Set vars: accounts, contacts" doc:id="d6fc62f4-9c1c-4e7b-a1cc-78298104e0ae" >
 			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
-				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
+				<ee:set-variable variableName="accounts" ><![CDATA[%dw 2.0
 output application/json
 ---
-0]]></ee:set-variable>
-				<ee:set-variable variableName="sfAccountResponse" ><![CDATA[%dw 2.0
+payload map {
+      "name": $.customer.customerName,
+      "customerNo": $.customer.customerNo,
+      "arDivisionNo": $.customer.arDivisionNo,
+      "accountType": "Customer",
+      "customerType": $.customer.customerType,
+      "salespersonNo": $.customer.salespersonNo,
+      "taxSchedule": $.customer.taxSchedule,
+      "currentBalance": $.customer.currentBalance,
+      "avgDaysPaymentInvoice": $.customer.avgDaysPaymentInvoice,
+      "dateLastPayment": $.customer.dateLastPayment as Date as String {format: "yyyy-MM-dd"},
+      "dateEstablished": $.customer.dateEstablished as Date as String {format: "yyyy-MM-dd"},
+      "aging30Days": $.customer.agingCategory1,
+      "aging60Days": $.customer.agingCategory2,
+      "aging90Days": $.customer.agingCategory3,
+      "agingOver90Days": $.customer.agingCategory4,
+      "shipMethod": $.customer.shipMethod,
+      "contactCode": $.customer.contactCode,
+      "primaryShipToCode": $.customer.primaryShipToCode,
+      "billingStreet": $.customer.addressLine1  default '' ++ "\n" ++ $.customer.addressLine2  default ''  ++ "\n" ++ $.customer.addressLine3  default '' ,
+      "billingCity": $.customer.city,
+      "billingPostalCode": $.customer.zipCode,
+      "billingStateCode": $.customer.state,
+      "billingCountryCode": $.customer.countryCode[0 to 1],
+      "Phone": $.customer.telephoneNo,
+      "emailAddress": $.customer.emailAddress,
+      "website": $.customer.urlAddress,
+      ("shippingStreet":  ($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToAddress1 default '' ++ "\n" ++ ($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToAddress2 default '' ++ "\n" ++ ($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToAddress3 default '') if !isEmpty($.shipToAddresses)  ,
+      ("shippingCity": ($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToCity) if !isEmpty($.shipToAddresses),
+      ("shippingPostalCode": ($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToZIPCode) if !isEmpty($.shipToAddresses),
+      ("shippingStateCode": ($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToState) if !isEmpty($.shipToAddresses),
+      ("shippingCountryCode": (($.shipToAddresses filter $.shipToCode == "SHIP")[0].shipToCountryCode default "USA")[0 to 1]) if !isEmpty($.shipToAddresses)
+    }]]></ee:set-variable>
+				<ee:set-variable variableName="contacts" ><![CDATA[%dw 2.0
 output application/json
 ---
-[]]]></ee:set-variable>
+flatten(payload.*customerContacts) map  {
+    "customerNo":$.customerNo,
+    "contactCode": $.contactCode,
+    "lastName": $.contactName,
+    "mailingStreet": trim($.addressLine1  default "" ++ "\n" ++ $.addressLine2  default "" ++ "\n" ++ $.addressLine3  default "" ),
+    "mailingCity": $.city,
+    "mailingStateCode": $.state,
+    "mailingPostalCode": $.zipCode,
+    "mailingCountryCode": $.countryCode[0 to 1],
+    "emailAddress": $.emailAddress,
+    "Phone": $.telephoneNo1
+}]]></ee:set-variable>
 			
 </ee:variables>
 		</ee:transform>
 		<choice doc:name="Choice" doc:id="ce152dba-01e1-44f7-a7cf-602413f61797" >
-			<when expression="#[!isEmpty(payload)]">
-				<try doc:name="Try" doc:id="8cadc340-6b6f-4f9f-86fd-14cd3830542b" >
-					<foreach doc:name="For Each" doc:id="ed7c880d-02f8-4949-b092-a8afc2fb3ae2" batchSize="${for-each.batchSize}">
-					<ee:transform doc:name="set Vars : requestPaths,sfRequestAccountList" doc:id="4cb09747-6b43-47f7-bc97-602cd0fe99b1">
+			<when expression="#[!isEmpty(vars.accounts)]">
+	<ee:transform doc:name="set Vars : requestPaths, sfAccountResponse" doc:id="4cb09747-6b43-47f7-bc97-602cd0fe99b1">
 					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
 					</ee:message>
 						<ee:variables>
-							<ee:set-variable variableName="recordCount"><![CDATA[%dw 2.0
-output application/json
----
-sizeOf(payload)]]></ee:set-variable>
 							<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
 output application/java
 ---
 {
 	"url" : p('sfdc-request.https.account'),
-	"method" : p('sfdc-request.https.products-method')
-	
+	"method" : p('sfdc-request.https.accounts-method')
 }]]></ee:set-variable>
+						<ee:set-variable variableName="sfAccountResponse" ><![CDATA[%dw 2.0
+output application/java
+---
+[]]]></ee:set-variable>
 						</ee:variables>
 				</ee:transform>
-					<flow-ref doc:name="common-request-salesforce-subflow" doc:id="33ac3219-94b2-41dd-8e7a-34fa0df2c147" name="common-request-salesforce-subflow" />
-					<ee:transform doc:name="set Vars: totalrecordCount, Incoming Response Structure" doc:id="8d210cfa-3eab-439b-a551-3c22e8d7040e">
-						<ee:message>
-							<ee:set-payload><![CDATA[%dw 2.0
-output application/json
-
-//Failed graph reques calls detials
-var graphRequestFailed = (payload.graphs filter($.isSuccessful ~= false)) map($.graphResponse.compositeResponse map($ - "httpHeaders"))
-
-//successed graph request calls details
-var graphRequestSuccss = (payload.graphs filter($.isSuccessful ~= true)).graphResponse.compositeResponse map($ map{
-	"id": $.body.id,
-	"success": $.body.success,
-	"httpStatusCode": $.httpStatusCode,
-	"referenceId": $.referenceId
-})
----
-{
-	"Success": graphRequestSuccss,
-	"Error": graphRequestFailed
-}
-]]></ee:set-payload>
-						</ee:message>
-						<ee:variables>
-							<ee:set-variable variableName="totalrecordCount"><![CDATA[%dw 2.0
-output application/json
----
-vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
-						</ee:variables>
-					</ee:transform>
-					<ee:transform doc:name="Set vars: sfAccountResponse" doc:id="710e36ec-4121-462d-b7ce-e340cd99c325">
+				<foreach doc:name="For Each" doc:id="ed7c880d-02f8-4949-b092-a8afc2fb3ae2" batchSize="1000" collection="#[vars.accounts]">
+						<try doc:name="Try" doc:id="57f3c561-0d51-4267-82b3-25915e7563aa" >
+							<flow-ref doc:name="common-request-salesforce-subflow" doc:id="33ac3219-94b2-41dd-8e7a-34fa0df2c147" name="common-request-salesforce-subflow" />
+							<ee:transform doc:name="Set vars: sfAccountResponse" doc:id="710e36ec-4121-462d-b7ce-e340cd99c325">
 						<ee:message>
 						</ee:message>
 						<ee:variables>
 							<ee:set-variable variableName="sfAccountResponse"><![CDATA[%dw 2.0
 output application/json
 ---
-vars.sfAccountResponse << payload]]></ee:set-variable>
+vars.sfAccountResponse ++ payload]]></ee:set-variable>
 						
 </ee:variables>
 					</ee:transform>
-				</foreach>
-					<ee:transform doc:name="For each payload" doc:id="cb42b773-7f66-4f4b-abbe-1ee0e024b861">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-vars.sfAccountResponse]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-					<ee:transform doc:name="Final payload" doc:id="2dc5f287-5826-4139-abb4-75efc980936d">
-					<ee:message>
-						<ee:set-payload><![CDATA[%dw 2.0
-output application/json
----
-{
-	"totalrecordCount" : vars.totalrecordCount,
-	"Success": vars.sfAccountResponse.Success filter (!isEmpty($)),
-	"Error": vars.sfAccountResponse.Error filter (!isEmpty($))
-}]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-					<error-handler >
-						<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b137cd5d-648a-4903-9416-e935b96ee79c" >
+							<error-handler >
+								<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b137cd5d-648a-4903-9416-e935b96ee79c">
 							<logger level="INFO" doc:name="Logger" doc:id="21ea2be3-32a5-409d-9fb8-c84b695e1bc7" message="====== Exception Occured #[payload] ================" />
-							<ee:transform doc:name="Transform Message" doc:id="1695c20f-cd8d-4407-8990-131217bc22ad" >
-								<ee:message >
-									<ee:set-payload ><![CDATA[%dw 2.0
+							<ee:transform doc:name="Transform Message" doc:id="1695c20f-cd8d-4407-8990-131217bc22ad">
+								<ee:message>
+									<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {	
@@ -169,8 +147,52 @@ output application/json
 								</ee:message>
 							</ee:transform>
 						</on-error-continue>
-					</error-handler>
-				</try>
+							</error-handler>
+						</try>
+				</foreach>
+					<ee:transform doc:name="For each payload" doc:id="cb42b773-7f66-4f4b-abbe-1ee0e024b861">
+					<ee:message>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="accountErrors" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfAccountResponse filter $.success == false]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<logger level="INFO" doc:name="Error Logger" doc:id="02c70ccc-67a6-45b2-a516-4ea288f8f6f8" message="The following Accounts has failed with Errors while sending into Salesforce : #[vars.accountErrors]" />
+				<choice doc:name="Choice" doc:id="a76d0715-936f-4649-8b96-543b7e2aaddf">
+			<when expression="#[sizeOf(vars.accountErrors) &gt; 0]">
+				<async doc:name="Async" doc:id="2a12b07d-c17a-4614-b279-5763757d4a61">
+					<try doc:name="Try" doc:id="aa52faa9-e5d3-4ba4-b4eb-4c5eeb694c72">
+						<email:send doc:name="Send" doc:id="47ea71ca-9916-4f07-9917-70a8c3cf058a" config-ref="Email_SMTP_Gmail" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Accounts-Impl-Flow"]' fromAddress="mulesoft.integration.heimanfire@gmail.com">
+							<email:to-addresses>
+								<email:to-address value="nishith.kumar@prowesssoft.com" />
+							</email:to-addresses>
+							<email:body contentType="text/plain">
+								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+							</email:body>
+							<email:attachments><![CDATA[#[%dw 2.0
+output application/json
+var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
+---
+{
+	("AccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.accountErrors, "application/json")
+}]]]></email:attachments>
+						</email:send>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="5acde085-47e2-4071-bb21-16b23128d473">
+								<logger level="INFO" doc:name="Logger" doc:id="b2d6ec89-2898-43da-88b6-b0e46e95ab66" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</async>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Default Logger" doc:id="a8910d35-39fb-4e5b-becb-f28957fe5200" message="=====No Errors in Salesforce Accounts=====" />
+			</otherwise>
+		</choice>
+
 			
 </when>
 			<otherwise >
@@ -186,41 +208,116 @@ output application/json
 				</ee:transform>
 			</otherwise>
 		</choice>
-		<logger level="INFO" doc:name="Error Logger" doc:id="02c70ccc-67a6-45b2-a516-4ea288f8f6f8" message="The following Accounts has failed with Errors while sending into Salesforce : #[payload.Error]"/>
-		<choice doc:name="Choice" doc:id="a76d0715-936f-4649-8b96-543b7e2aaddf">
-			<when expression="#[sizeOf(payload.Error) &gt; 0]">
-				<async doc:name="Async" doc:id="2a12b07d-c17a-4614-b279-5763757d4a61">
-					<try doc:name="Try" doc:id="aa52faa9-e5d3-4ba4-b4eb-4c5eeb694c72">
-						<email:send doc:name="Send" doc:id="47ea71ca-9916-4f07-9917-70a8c3cf058a" config-ref="Email_SMTP_Gmail" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Accounts-Impl-Flow"]' fromAddress="mulesoft.integration.heimanfire@gmail.com">
-							<email:to-addresses>
-								<email:to-address value="nishith.kumar@prowesssoft.com" />
-							</email:to-addresses>
-							<email:body contentType="text/plain">
-								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
-							</email:body>
-							<email:attachments><![CDATA[#[%dw 2.0
+		<choice doc:name="Choice" doc:id="7b30a871-2b8f-4cbd-bbcb-5542a086b61d">
+			<when expression="#[!isEmpty(vars.contacts)]">
+				<ee:transform doc:name="set Vars : requestPaths, sfContactResponse" doc:id="2cafffad-d0d2-4c66-9fdf-f1ff27d463ed">
+					<ee:message />
+					<ee:variables>
+						<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('sfdc-request.https.contact'),
+	"method" : p('sfdc-request.https.contact-method')
+}]]></ee:set-variable>
+						<ee:set-variable variableName="sfContactResponse" ><![CDATA[%dw 2.0
+output application/java
+---
+[]]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<foreach doc:name="For Each" doc:id="10f945a2-14f9-4542-a3ac-0b65515ec10a" collection="#[vars.accounts]" batchSize="1000">
+					<try doc:name="Try" doc:id="fe3f96bd-585e-432e-93cc-44643303f2ee">
+						<flow-ref doc:name="common-request-salesforce-subflow" doc:id="7286cabf-97b2-463c-8178-a164cceca450" name="common-request-salesforce-subflow" />
+						<ee:transform doc:name="Set vars: sfContactResponse" doc:id="b339b752-4c20-4749-978c-00f947b5c720">
+							<ee:message />
+							<ee:variables>
+								<ee:set-variable variableName="sfContactResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfContactResponse ++ payload]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3558aa6f-e813-4e6a-af5f-2734c75fb068">
+								<logger level="INFO" doc:name="Logger" doc:id="14808a89-5431-4152-9c7b-dd4649350079" message="====== Exception Occured #[payload] ================" />
+								<ee:transform doc:name="Transform Message" doc:id="f0f3b01c-b3d3-483e-9be5-4b05e9cbccbe">
+									<ee:message>
+										<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{	
+	"errorCode": error.errorCode,
+	"errorDescription": error.description,
+	"identifier": error.errorType.identifier,
+	"errorType": error.errorType,
+	"transactionId": correlationId,
+	"timeStamp": now() as DateTime
+}]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</foreach>
+				<ee:transform doc:name="For each payload" doc:id="67384ba0-06d5-4000-b58f-ee1fe6e4e9c7">
+					<ee:message />
+					<ee:variables>
+						<ee:set-variable variableName="contactErrors" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfContactResponse filter $.success == false]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<logger level="INFO" doc:name="Error Logger" doc:id="de9c0c84-82c1-4b92-9d74-732a30345c05" message="The following contacts has failed with Errors while sending into Salesforce : #[vars.contactErrors]" />
+				<choice doc:name="Choice" doc:id="668811e9-5177-4dc3-91a3-3d1e25907bf3">
+					<when expression="#[sizeOf(vars.contactErrors) &gt; 0]">
+						<async doc:name="Async" doc:id="f5ac3eab-e6a8-43d3-8bb6-bf164fda3955">
+							<try doc:name="Try" doc:id="a147ac3f-82be-4117-83d4-5f49f3c471b0">
+								<email:send doc:name="Send" doc:id="1fa97bcf-9162-47df-bd53-fc28297ef0c7" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Contacts-Impl-Flow"]'>
+									<email:to-addresses>
+										<email:to-address value="nishith.kumar@prowesssoft.com" />
+									</email:to-addresses>
+									<email:body contentType="text/plain">
+										<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+									</email:body>
+									<email:attachments><![CDATA[#[%dw 2.0
 output application/json
 var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
 ---
 {
-	("AccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(payload.Error, "application/json")
+	("AccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.contactErrors, "application/json")
 }]]]></email:attachments>
-						</email:send>
-						<error-handler>
-							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="5acde085-47e2-4071-bb21-16b23128d473">
-								<logger level="INFO" doc:name="Logger" doc:id="b2d6ec89-2898-43da-88b6-b0e46e95ab66" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
-							</on-error-continue>
-						</error-handler>
-					</try>
-				</async>
+								</email:send>
+								<error-handler>
+									<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="52d15495-81c6-4683-9482-7766d188598f">
+										<logger level="INFO" doc:name="Logger" doc:id="e5afd30d-1882-4a79-bac5-196d995dc937" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+									</on-error-continue>
+								</error-handler>
+							</try>
+						</async>
+					</when>
+					<otherwise>
+						<logger level="INFO" doc:name="Default Logger" doc:id="98debc52-5160-493d-b452-fbc3f2b5b3cb" message="=====No Errors in Salesforce Accounts=====" />
+					</otherwise>
+				</choice>
 			</when>
 			<otherwise>
-				<logger level="INFO" doc:name="Default Logger" doc:id="a8910d35-39fb-4e5b-becb-f28957fe5200" message="=====No Errors in Salesforce Accounts=====" />
+				<ee:transform doc:name="Default message" doc:id="4e0d06ab-ca41-455a-b031-42305b7cc71b">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Status" : "Account data not found in AccountList"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
 			</otherwise>
 		</choice>
-		<os:store doc:name="Store" doc:id="e6f8a808-e18b-4cc9-83b8-bd917c7febfe" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate">
-			<os:value ><![CDATA[#[(now() >> "UTC") as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"}]]]></os:value>
+		<os:store doc:name="Store" doc:id="f28eb478-a962-4659-8107-aa99f9054aed" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate">
+			<os:value><![CDATA[#[(now() >> "UTC") as String {format: "yyyy-MM-dd'T'HH:mm:ss'Z'"}]]]></os:value>
 		</os:store>
-		<logger level="INFO" doc:name="Final log message" doc:id="3a486c81-5ab1-4562-81e4-5ad4d67172b2" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-AccountsData-#[now()]"/>
+		<logger level="INFO" doc:name="Final log message" doc:id="3a486c81-5ab1-4562-81e4-5ad4d67172b2" message=" Accounts and Contacts sync from Sage to Salesforce Ended"/>
 	</sub-flow>
 	</mule>

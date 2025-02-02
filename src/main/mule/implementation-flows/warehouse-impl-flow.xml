@@ -21,11 +21,6 @@ output application/java
 	"method" : p('db.request.https.method'),
 	
 }]]></ee:set-variable>
-				<ee:set-variable variableName="fileType" ><![CDATA[%dw 2.0
-import p from Mule
-output application/java
----
-"ProductsData" ++ ' ' ++ p('heimanfireEnv')]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="common-request-sage-subflow" doc:id="e9376db2-1aa7-470a-9aab-2da931afa3b6" name="common-request-sage-subflow"/>
