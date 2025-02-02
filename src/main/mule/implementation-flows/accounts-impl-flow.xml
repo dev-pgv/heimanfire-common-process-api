@@ -8,7 +8,7 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
 http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
 	
-	<sub-flow name="heimanfire-accounts-creation-subflow" doc:id="8bd69908-fa31-4e78-b535-4b0ce33de722" >
+	<sub-flow name="heimanfire-accounts-contacts-sync-subflow" doc:id="8bd69908-fa31-4e78-b535-4b0ce33de722" >
 		<logger level="INFO" doc:name="Logger" doc:id="ecc7b9b4-960f-4a1f-be09-5bc855f5fc55" message="Accounts and Contacts sync from Sage to Salesforce started"/>
 		<os:retrieve doc:name="Retrieve" doc:id="7c1cd3da-8c9a-4b32-a15c-3f6966863f2b" key="accountsLastModifiedDate" objectStore="accountsLastModifiedDate" target="accountsLastModifiedDate">
 			<os:default-value ><![CDATA[#[%dw 2.0
@@ -116,7 +116,15 @@ output application/java
 				</ee:transform>
 				<foreach doc:name="For Each" doc:id="ed7c880d-02f8-4949-b092-a8afc2fb3ae2" batchSize="1000" collection="#[vars.accounts]">
 						<try doc:name="Try" doc:id="57f3c561-0d51-4267-82b3-25915e7563aa" >
-							<flow-ref doc:name="common-request-salesforce-subflow" doc:id="33ac3219-94b2-41dd-8e7a-34fa0df2c147" name="common-request-salesforce-subflow" />
+							<ee:transform doc:name="Set Payload" doc:id="7ff613eb-a6bb-48ba-b97a-9b78d0777f11" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<flow-ref doc:name="common-request-salesforce-subflow" doc:id="33ac3219-94b2-41dd-8e7a-34fa0df2c147" name="common-request-salesforce-subflow" />
 							<ee:transform doc:name="Set vars: sfAccountResponse" doc:id="710e36ec-4121-462d-b7ce-e340cd99c325">
 						<ee:message>
 						</ee:message>
@@ -228,6 +236,14 @@ output application/java
 				</ee:transform>
 				<foreach doc:name="For Each" doc:id="10f945a2-14f9-4542-a3ac-0b65515ec10a" collection="#[vars.accounts]" batchSize="1000">
 					<try doc:name="Try" doc:id="fe3f96bd-585e-432e-93cc-44643303f2ee">
+						<ee:transform doc:name="Set Payload" doc:id="73f85baa-d202-4d97-859a-cfd85a229a03" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
 						<flow-ref doc:name="common-request-salesforce-subflow" doc:id="7286cabf-97b2-463c-8178-a164cceca450" name="common-request-salesforce-subflow" />
 						<ee:transform doc:name="Set vars: sfContactResponse" doc:id="b339b752-4c20-4749-978c-00f947b5c720">
 							<ee:message />
