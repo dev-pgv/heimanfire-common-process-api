@@ -26,20 +26,20 @@ output application/java
 		<ee:transform doc:name="Set Payload sfProductResponse" doc:id="5aa3a0b0-227c-420c-a565-072870914a75" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
+output application/json encoding="UTF-8"
 ---
 (payload default [] map {
-	"found": $.found default '',
-	"itemCode":  trim($.itemCode) default '',
-	"itemCodeDesc": $.itemCodeDesc default '',
-	"productLine": $.productLine default '',
-	"productType": $.productType default '',
-	"inventoryCycle": $.inventoryCycle default '',
-	"standardUnitOfMeasure": $.standardUnitOfMeasure default '',
-	"valuation": $.valuation default '',
-	"procurementType": $.procurementType default '',
-	"standardUnitPrice" : $.standardUnitPrice as String default '',
-	"active" : "true"
+	"found": $.found default "",
+	"itemCode":  ($.itemCode default ""),
+	"itemCodeDesc": $.itemCodeDesc default "NA",
+	"productLine": $.productLine default "",
+	"productType": $.productType default "",
+	"inventoryCycle": $.inventoryCycle default "",
+	"standardUnitOfMeasure": if ( $.standardUnitOfMeasure == 'EA' ) "Each" else $.standardUnitOfMeasure default "",
+	"valuation": $.valuation default "",
+	"procurementType": $.procurementType default "",
+	"standardUnitPrice" : (($.standardUnitPrice default 0.00) as Number) as String {format: "s0"},
+	"active" : true
 })]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
@@ -49,6 +49,51 @@ output application/java
 []]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
+		<!-- [STUDIO:"Transform Message"]<ee:transform doc:name="Transform Message" doc:id="a632c118-2ed0-4fc5-984d-25b1c4659998" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+[
+	{
+        "itemCode": "1270-AR06378301",
+        "itemCodeDesc": "Foam Nozzle HP 1\" NH",
+        "productLine": "BRG",
+        "productType": "F",
+        "inventoryCycle": "",
+        "standardUnitOfMeasure": "EA",
+        "valuation": "3",
+        "procurementType": "B",
+        "standardUnitPrice": 0.000000,
+        "active": true
+    },
+    {
+        "itemCode": "1270-AR07209200",
+        "itemCodeDesc": "Nozzle Tip",
+        "productLine": "MIS",
+        "productType": "F",
+        "inventoryCycle": "",
+        "standardUnitOfMeasure": "EA",
+        "valuation": "3",
+        "procurementType": "B",
+        "standardUnitPrice": 0.000000,
+        "active": true
+    },
+    {
+        "itemCode": "1270-AR522890",
+        "itemCodeDesc": "Foam Tube",
+        "productLine": "BRG",
+        "productType": "F",
+        "inventoryCycle": "",
+        "standardUnitOfMeasure": "EA",
+        "valuation": "3",
+        "procurementType": "B",
+        "standardUnitPrice": 0.000000,
+        "active": true
+    }
+&#93;&#93;&#93;></ee:set-payload>
+			</ee:message>
+		</ee:transform> [STUDIO] -->
 		<ee:transform doc:name="set Vars : requestPaths,sfRequestProductList" doc:id="dd38d3a7-fac7-4024-802c-d9b102f31b5a">
 					<ee:message>
 					</ee:message>
@@ -120,10 +165,7 @@ vars.sfProductResponse filter $.isRequestSuccessful == false]]></ee:set-variable
 			<when expression="#[sizeOf(vars.errorItems) &gt; 0]">
 				<async doc:name="Async" doc:id="b1fc7f9d-2f5a-48d8-b7f8-e8e990c3386d">
 					<try doc:name="Try" doc:id="e6cdb09f-416b-400e-9c7f-ee2ef74c925a">
-						<email:send doc:name="Send" doc:id="7caaf900-2deb-4b3a-9dd1-e6e52b2c2d7d" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Products-Impl-Flow"]'>
-							<email:to-addresses>
-								<email:to-address value="nishith.kumar@prowesssoft.com" />
-							</email:to-addresses>
+						<email:send doc:name="Send-Email-Products" doc:id="7caaf900-2deb-4b3a-9dd1-e6e52b2c2d7d" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["HeimanFire MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Products-Impl-Flow"]' toAddresses="#[p('error-mail.receipent') splitBy ',']">
 							<email:body contentType="text/plain">
 								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
 							</email:body>
@@ -132,7 +174,7 @@ output application/json
 var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
 ---
 {
-	("ProductErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.errorItems, "application/json")
+	("HeimanfireProductErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.errorItems, "application/json")
 }]]]></email:attachments>
 						</email:send>
 						<error-handler>

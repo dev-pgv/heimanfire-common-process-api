@@ -19,7 +19,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		<logger level="INFO" doc:name="Logger" doc:id="ca6d4b9b-85cc-45b4-8642-f7dec56e4b16" message="===== Product flow Ended ======="/>
 		<error-handler ref="global-error-handler" />
 	</flow>
-	<flow name="scheduler-heimanfire-common-accounts-contacts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc">
+	<flow name="scheduler-heimanfire-common-accounts-contacts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc" initialState="stopped">
 		<scheduler doc:name="Scheduler" doc:id="07fa251b-4683-4c29-9c40-9960c8b21ab5" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="10" timeUnit="HOURS"/>
@@ -29,7 +29,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		<flow-ref doc:name="heimanfire-accounts-contacts-sync-subflow" doc:id="d1284e37-881e-48c0-be9b-965fb56bb4bc" name="heimanfire-accounts-contacts-sync-subflow" />
 		<logger level="INFO" doc:name="Logger" doc:id="5cd72a01-6777-4959-84b5-b8439a26f76f" message="===== Accounts and Contacts flow Ended =======" />
 	</flow>
-	<flow name="scheduler-heimanfire-warehouse-common-process-api" doc:id="5cbfe9b6-5a0b-4b51-98ef-2c123162afc6" initialState="stopped">
+	<flow name="scheduler-heimanfire-warehouse-common-process-api" doc:id="5cbfe9b6-5a0b-4b51-98ef-2c123162afc6">
 		<scheduler doc:name="Scheduler" doc:id="7b9e9ffa-e978-4fea-bc8d-ee1d6e581894" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="50" timeUnit="HOURS" />

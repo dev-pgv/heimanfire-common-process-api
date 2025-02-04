@@ -6,40 +6,34 @@ https:
 #cron expression
 cron:
   products: "0 0 1 ? * MON-FRI *"
-    
 #heimanfire-sfdc-sys-api Listener configuration
 sfdc-request:
   https:
     products-method: "POST"
-    pricebook-method: "GET"
-    customers-method: "POST"
-    attachment-method: "POST" 
-    protocol: "https"
-    host: "prod-heimanfire-sfdc-sys-api-du22kx.nuw5ad.usa-e2.cloudhub.io"
+    protocol: "HTTPS"
+    host: "heimanfire-sfdc-sys-api-5mcvbe.5sc6y6-4.usa-e2.cloudhub.io"
     port: "443"
     products: "/api/v1/products"
-     
+    account : "/api/v1/account"
+    warehouseitemstock : "/api/v1/warehouseitemstock"      
+    order : "/api/v1/order" 
+    orderItem : "/api/v1/orderItem" 
 
 #heimanfire-db-sys-api Listener configuration
 db:
   request:
     https:
       method: "GET"
-      customerstatus-method: "POST"
-      protocol: "https"
-      host: "prod-heimanfire-db-sys-api-du22kx.nuw5ad.usa-e2.cloudhub.io"
+      account-method: "POST"
+      order-method : "POST"
+      protocol: "HTTPS"
+      host: "heimanfire-sage-sys-api-5mcvbe.5sc6y6-2.usa-e2.cloudhub.io"
       port: "443"
-      productlist: "/api/v1/productlist"
+      productlist: "/api/v1/itemlist"
+      accountlist : "/api/v1/customerRecordList"
+      warehouse : "/api/v1/warehouseStockList"
+      order : "/api/v1/invoicedOrderList"
 
-#heimanfire-db-sys-api client details
-heimanfire:
-  db:
-    clientId: "7547fccc7c7d47d3ab385452ded97e44" 
-
-#heimanfire-sfdc-sys-api client details
-heimanfire-sfdc:
-  clientId: "5be0bd4fd0fb4bbdbcee9b630006dba8" 
-    
 #Request Timeout config
 http-request:
   timeout: "6000000"  
@@ -47,9 +41,25 @@ http-request:
   
 #For Each batch size details
 for-each:
-  batchSize: "35"  
-  
-  
+  batchSize: "70" 
+  upsertbatchSize : "200" 
+#heimanfire-db-sys-api client details
+heimanfire:
+  db:
+    clientId: "244201dddb8c405c814684b7bc54db65" 
 
+#heimanfire-sfdc-sys-api client details
+heimanfire-sfdc:
+  clientId: "7c22a900b4594232a2fccf898c02e47c"  
+  
 #For the Environment identification for the email subject & body
-bppEnv: 'Prod'    
+heimanfireEnv: 'prod' 
+
+#last modified date
+accountsLastModifiedDate : "2022-07-01T16:12:01.929Z"   
+orderLastModifiedDate : "2022-07-01T16:12:01.929Z"  
+
+#Error Receipent
+error-mail:
+  receipent: "nicholaslarsen@heimanfire.com,btemple@heimanfire.com,nishith.kumar@prowesssoft.com,praveen.gv@prowesssoft.com"
+   

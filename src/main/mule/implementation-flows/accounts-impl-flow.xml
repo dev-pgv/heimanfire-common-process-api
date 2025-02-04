@@ -173,10 +173,7 @@ vars.sfAccountResponse filter $.success == false]]></ee:set-variable>
 			<when expression="#[sizeOf(vars.accountErrors) &gt; 0]">
 				<async doc:name="Async" doc:id="2a12b07d-c17a-4614-b279-5763757d4a61">
 					<try doc:name="Try" doc:id="aa52faa9-e5d3-4ba4-b4eb-4c5eeb694c72">
-						<email:send doc:name="Send" doc:id="47ea71ca-9916-4f07-9917-70a8c3cf058a" config-ref="Email_SMTP_Gmail" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Accounts-Impl-Flow"]' fromAddress="mulesoft.integration.heimanfire@gmail.com">
-							<email:to-addresses>
-								<email:to-address value="nishith.kumar@prowesssoft.com" />
-							</email:to-addresses>
+						<email:send doc:name="Send-Email-Accounts" doc:id="47ea71ca-9916-4f07-9917-70a8c3cf058a" config-ref="Email_SMTP_Gmail" subject='#["HeimanFire MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Accounts-Impl-Flow"]' fromAddress="mulesoft.integration.heimanfire@gmail.com" toAddresses="#[p('error-mail.receipent') splitBy ',']">
 							<email:body contentType="text/plain">
 								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
 							</email:body>
@@ -185,7 +182,7 @@ output application/json
 var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
 ---
 {
-	("AccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.accountErrors, "application/json")
+	("HeimanfireAccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.accountErrors, "application/json")
 }]]]></email:attachments>
 						</email:send>
 						<error-handler>
@@ -226,7 +223,7 @@ output application/java
 ---
 {
 	"url" : p('sfdc-request.https.contact'),
-	"method" : p('sfdc-request.https.contact-method')
+	"method" : p('sfdc-request.https.contacts-method')
 }]]></ee:set-variable>
 						<ee:set-variable variableName="sfContactResponse" ><![CDATA[%dw 2.0
 output application/java
@@ -234,7 +231,7 @@ output application/java
 []]]></ee:set-variable>
 					</ee:variables>
 				</ee:transform>
-				<foreach doc:name="For Each" doc:id="10f945a2-14f9-4542-a3ac-0b65515ec10a" collection="#[vars.accounts]" batchSize="1000">
+				<foreach doc:name="For Each" doc:id="10f945a2-14f9-4542-a3ac-0b65515ec10a" collection="#[vars.contacts]" batchSize="1000">
 					<try doc:name="Try" doc:id="fe3f96bd-585e-432e-93cc-44643303f2ee">
 						<ee:transform doc:name="Set Payload" doc:id="73f85baa-d202-4d97-859a-cfd85a229a03" >
 							<ee:message >
@@ -290,10 +287,7 @@ vars.sfContactResponse filter $.success == false]]></ee:set-variable>
 					<when expression="#[sizeOf(vars.contactErrors) &gt; 0]">
 						<async doc:name="Async" doc:id="f5ac3eab-e6a8-43d3-8bb6-bf164fda3955">
 							<try doc:name="Try" doc:id="a147ac3f-82be-4117-83d4-5f49f3c471b0">
-								<email:send doc:name="Send" doc:id="1fa97bcf-9162-47df-bd53-fc28297ef0c7" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Contacts-Impl-Flow"]'>
-									<email:to-addresses>
-										<email:to-address value="nishith.kumar@prowesssoft.com" />
-									</email:to-addresses>
+								<email:send doc:name="Send-Email-Contacts" doc:id="1fa97bcf-9162-47df-bd53-fc28297ef0c7" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["HeimanFire MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Contacts-Impl-Flow"]' toAddresses="#[p('error-mail.receipent') splitBy ',']">
 									<email:body contentType="text/plain">
 										<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
 									</email:body>
@@ -302,7 +296,7 @@ output application/json
 var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
 ---
 {
-	("AccountErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.contactErrors, "application/json")
+	("HeimanfireContactErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.contactErrors, "application/json")
 }]]]></email:attachments>
 								</email:send>
 								<error-handler>

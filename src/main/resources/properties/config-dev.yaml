@@ -59,5 +59,11 @@ heimanfire-sfdc:
 heimanfireEnv: 'local' 
 
 #last modified date
-accountsLastModifiedDate : "2022-07-01T16:12:01.929Z"   
+accountsLastModifiedDate : "1900-01-01T00:00:00.000Z"   
 orderLastModifiedDate : "2022-07-01T16:12:01.929Z"  
+
+
+#Error Receipent
+error-mail:
+  receipent: "nicholaslarsen@heimanfire.com,btemple@heimanfire.com,nishith.kumar@prowesssoft.com,praveen.gv@prowesssoft.com"
+   
