@@ -91,6 +91,7 @@ flatten(payload.*customerContacts) map  {
     "mailingCountryCode": $.countryCode[0 to 1],
     "emailAddress": $.emailAddress,
     "Phone": $.telephoneNo1
+    //"Fax": $.
 }]]></ee:set-variable>
 			
 </ee:variables>
@@ -137,20 +138,36 @@ vars.sfAccountResponse ++ payload]]></ee:set-variable>
 </ee:variables>
 					</ee:transform>
 							<error-handler >
-								<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b137cd5d-648a-4903-9416-e935b96ee79c">
-							<logger level="INFO" doc:name="Logger" doc:id="21ea2be3-32a5-409d-9fb8-c84b695e1bc7" message="====== Exception Occured #[payload] ================" />
+								<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="661d3943-c44e-44b5-8fc5-f8d542854094" type="ANY">
+								<logger level="INFO" doc:name="Logger" doc:id="aecaab3d-faa7-4e19-a49d-4df16b9f400e" message="====Error Connecting to Salesforce system - SALESFORCE: CONNECTIVITY ===="/>
+								<ee:transform doc:name="Transform Message" doc:id="175f7e16-df97-4c44-829f-539b0625104e" >
+									<ee:message >
+										<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage,
+  "transactionId": correlationId,
+  "timeStamp": now() as DateTime
+}]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+							</on-error-propagate>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b137cd5d-648a-4903-9416-e935b96ee79c">
+							<logger level="INFO" doc:name="Logger" doc:id="21ea2be3-32a5-409d-9fb8-c84b695e1bc7" message="Error has occured while processing the Accounts from Sage to Salesforce, Continuing to next Account" />
 							<ee:transform doc:name="Transform Message" doc:id="1695c20f-cd8d-4407-8990-131217bc22ad">
 								<ee:message>
 									<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{	
-	"errorCode": error.errorCode,
-	"errorDescription": error.description,
-	"identifier": error.errorType.identifier,
-	"errorType": error.errorType,
-	"transactionId": correlationId,
-	"timeStamp": now() as DateTime
+{
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage default 'Error Occoured while connecting to Database',
+  "transactionId": correlationId,
+  "timeStamp": now() as DateTime
 }]]></ee:set-payload>
 								</ee:message>
 							</ee:transform>
@@ -252,20 +269,36 @@ vars.sfContactResponse ++ payload]]></ee:set-variable>
 							</ee:variables>
 						</ee:transform>
 						<error-handler>
+							<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="b0f83e78-c68f-4891-8e77-74d78db795b7" type="ANY">
+								<logger level="INFO" doc:name="Logger" doc:id="5c1c0c5d-e7da-438a-824a-4165ff5db879" message="====Error Connecting to Salesforce system - SALESFORCE: CONNECTIVITY ===="/>
+								<ee:transform doc:name="Transform Message" doc:id="ed55da19-f8cc-4012-86ef-4556c3dae92b" >
+									<ee:message >
+										<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage,
+  "transactionId": correlationId,
+  "timeStamp": now() as DateTime
+}]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+							</on-error-propagate>
 							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3558aa6f-e813-4e6a-af5f-2734c75fb068">
-								<logger level="INFO" doc:name="Logger" doc:id="14808a89-5431-4152-9c7b-dd4649350079" message="====== Exception Occured #[payload] ================" />
+								<logger level="INFO" doc:name="Logger" doc:id="14808a89-5431-4152-9c7b-dd4649350079" message="Error has occured while processing the Contacts from Sage to Salesforce, Continuing to next Contact" />
 								<ee:transform doc:name="Transform Message" doc:id="f0f3b01c-b3d3-483e-9be5-4b05e9cbccbe">
 									<ee:message>
 										<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-{	
-	"errorCode": error.errorCode,
-	"errorDescription": error.description,
-	"identifier": error.errorType.identifier,
-	"errorType": error.errorType,
-	"transactionId": correlationId,
-	"timeStamp": now() as DateTime
+{
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage default 'Error Occoured while connecting to Database',
+  "transactionId": correlationId,
+  "timeStamp": now() as DateTime
 }]]></ee:set-payload>
 									</ee:message>
 								</ee:transform>

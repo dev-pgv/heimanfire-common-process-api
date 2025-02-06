@@ -19,7 +19,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		<logger level="INFO" doc:name="Logger" doc:id="ca6d4b9b-85cc-45b4-8642-f7dec56e4b16" message="===== Product flow Ended ======="/>
 		<error-handler ref="global-error-handler" />
 	</flow>
-	<flow name="scheduler-heimanfire-common-accounts-contacts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc" initialState="stopped">
+	<flow name="scheduler-heimanfire-common-accounts-contacts-apiFlow" doc:id="496c10d5-fbd2-42df-b5c6-1e29940b89cc">
 		<scheduler doc:name="Scheduler" doc:id="07fa251b-4683-4c29-9c40-9960c8b21ab5" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="10" timeUnit="HOURS"/>

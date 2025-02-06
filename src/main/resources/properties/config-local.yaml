@@ -27,6 +27,7 @@ db:
   request:
     https:
       method: "GET"
+      warehouse-method: "GET"
       account-method: "POST"
       order-method : "POST"
       protocol: "HTTP"
@@ -65,5 +66,5 @@ orderLastModifiedDate : "2022-07-01T16:12:01.929Z"
 
 #Error Receipent
 error-mail:
-  receipent: "nicholaslarsen@heimanfire.com,btemple@heimanfire.com,nishith.kumar@prowesssoft.com,praveen.gv@prowesssoft.com"
-   
+  receipent: "nicholaslarsen@heimanfire.com,btemple@heimanfire.com,nishith.kumar@prowesssoft.com,praveen.gv@prowesssoft.com,sivakumar.murugan@prowesssoft.com"
+  

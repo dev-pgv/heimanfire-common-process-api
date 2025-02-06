@@ -27,6 +27,7 @@ db:
   request:
     https:
       method: "GET"
+      warehouse-method: "GET"
       account-method: "POST"
       order-method : "POST"
       protocol: "HTTPS"
@@ -56,7 +57,7 @@ heimanfire-sfdc:
   clientId: "7c22a900b4594232a2fccf898c02e47c"  
   
 #For the Environment identification for the email subject & body
-heimanfireEnv: 'local' 
+heimanfireEnv: 'dev' 
 
 #last modified date
 accountsLastModifiedDate : "1900-01-01T00:00:00.000Z"   
@@ -65,5 +66,5 @@ orderLastModifiedDate : "2022-07-01T16:12:01.929Z"
 
 #Error Receipent
 error-mail:
-  receipent: "nicholaslarsen@heimanfire.com,btemple@heimanfire.com,nishith.kumar@prowesssoft.com,praveen.gv@prowesssoft.com"
-   
+  receipent: "nicholaslarsen@heimanfire.com,btemple@heimanfire.com,nishith.kumar@prowesssoft.com,praveen.gv@prowesssoft.com,sivakumar.murugan@prowesssoft.com"
+  

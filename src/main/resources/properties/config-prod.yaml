@@ -24,6 +24,7 @@ db:
   request:
     https:
       method: "GET"
+      warehouse-method: "POST"
       account-method: "POST"
       order-method : "POST"
       protocol: "HTTPS"

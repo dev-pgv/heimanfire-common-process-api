@@ -16,15 +16,11 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 output application/json
 ---
 {
-	"error": if ( !isEmpty(payload.errorMessage) ) (vars.error_object) else
-	
-	{
-		"errorCode": p('common.errors.error-code-500'),
-		"errorDescription": error.description,
-		"transactionId": correlationId,
-		"identifier": error.errorType.parentErrorType.identifier default error.errorType.identifier,
-		"timeStamp": now()
-	}
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage,
+  "transact	ionId": correlationId,
+  "timeStamp": now() as DateTime
 }]]></ee:set-payload>
 				</ee:message>
 				<ee:variables>

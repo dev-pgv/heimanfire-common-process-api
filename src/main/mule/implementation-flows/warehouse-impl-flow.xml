@@ -17,36 +17,186 @@ http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/em
 output application/java
 ---
 {
-	"url" : p('db.request.https.productlist'),
+	"url" : p('db.request.https.warehouse'),
 	"method" : p('db.request.https.method'),
 	
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
 		<flow-ref doc:name="common-request-sage-subflow" doc:id="e9376db2-1aa7-470a-9aab-2da931afa3b6" name="common-request-sage-subflow"/>
-		<ee:transform doc:name="Set vars: sfRequestforEachCustomerList,  totalrecordCount" doc:id="22af50a5-134d-4a52-a37b-0f25adca914f" >
+		<ee:transform doc:name="payload and sfProductResponse" doc:id="1b6a28cb-f152-4171-b9de-7f40bde2ff70" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
 (payload default [] map {
-    itemCode : $.itemCode default ''
+	    "ExternalKey__c" : trim($.itemCode ++ '|' ++ $.warehouseCode),
+        "itemCode": $.itemCode default '',
+        "itemCodeDesc": $.itemCodeDesc default '',
+        "warehouseCode": $.warehouseCode default '',
+        "quantityOnHand": $.quantityOnHand default '',
+        "quantityOnPurchaseOrder": $.quantityOnPurchaseOrder default '',
+        "quantityOnSalesOrder": $.quantityOnSalesOrder default '',
+        "quantityOnBackOrder": $.quantityOnBackOrder default ''
 })]]></ee:set-payload>
 			</ee:message>
 			<ee:variables >
-				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
-output application/json
----
-0]]></ee:set-variable>
 				<ee:set-variable variableName="sfWarehouseResponse" ><![CDATA[%dw 2.0
 output application/json
 ---
 []]]></ee:set-variable>
+				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
+output application/json
+---
+0]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="638a402c-0dac-4ba9-9554-43c2ace60583" >
+			<when expression="#[!isEmpty(payload)]">
+				<foreach doc:name="For Each" doc:id="92a363c4-38fc-494f-9707-79e04cc8cf3d" batchSize="1000">
+					<try doc:name="Try" doc:id="364d4b63-7ef5-49c6-98c5-59f0bfbc7eb7" >
+						<ee:transform doc:name="Transform Message" doc:id="0d89daff-15b1-4e94-8f81-e9f9cf42413c" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+							</ee:message>
+							<ee:variables >
+								<ee:set-variable variableName="requestPaths" ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"url" : p('sfdc-request.https.warehouseitemstock'),
+	"method" : p('sfdc-request.https.products-method')
+	
+}]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<flow-ref doc:name="common-request-salesforce-subflow" doc:id="e0fd318c-5d94-4f35-974f-37d222bfa1e7" name="common-request-salesforce-subflow" />
+						<ee:transform doc:name="Set vars: sfAccountResponse" doc:id="356583b8-f0bb-4df6-9249-d6f2ed9e01e9" >
+							<ee:message />
+							<ee:variables >
+								<ee:set-variable variableName="sfWarehouseResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfWarehouseResponse ++ payload]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+						<error-handler >
+							<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9a4a220d-fdd0-4aa8-99a1-b4dfd80f9d1e" type="ANY">
+								<logger level="INFO" doc:name="Logger" doc:id="80d25ccc-536e-43ae-ba5e-e46eab8e41bc" message="====Error Connecting to Salesforce system - SALESFORCE: CONNECTIVITY ====" />
+								<ee:transform doc:name="Transform Message" doc:id="6961da98-05b5-46be-9008-3e164232d079" >
+									<ee:message >
+										<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage default 'Error Occoured while connecting to Database',
+  "transactionId": correlationId,
+  "timeStamp": now() as DateTime
+}]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+							</on-error-propagate>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="62730263-9d9d-4fe6-846b-08e2e0061681" >
+								<logger level="INFO" doc:name="Logger" doc:id="b827ef58-0a97-4011-87d1-bf2edaf95937" message="Error has occured while processing the Warehouse from Sage to Salesforce, Continuing to next Item" />
+								<ee:transform doc:name="Transform Message" doc:id="3f678834-4494-4711-bfa0-d67086338f50" >
+									<ee:message >
+										<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "status": "error",
+  "errorType": error.errorType,
+  "errorMessage": error.detailedDescription default error.description default error.errorMessage default 'Error Occoured while connecting to Database',
+  "transactionId": correlationId,
+  "timeStamp": now() as DateTime
+}]]></ee:set-payload>
+									</ee:message>
+								</ee:transform>
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</foreach>
+				<ee:transform doc:name="For each payload" doc:id="e23e8f1c-9a64-4d79-9e2a-396a91d645e1">
+							<ee:message />
+							<ee:variables>
+						<ee:set-variable variableName="warehouseErrors" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.sfWarehouseResponse filter $.success == false]]></ee:set-variable>
+							</ee:variables>
+						</ee:transform>
+				<logger level="INFO" doc:name="Error Logger" doc:id="1e0edbaa-971b-4092-86a1-05366435ddda" message="The following Warehouse records has failed with Errors while sending into Salesforce : #[vars.warehouseErrors]" />
+				<choice doc:name="Choice" doc:id="36023d99-a17f-43d0-a4bd-4a12768c93ab">
+			<when expression="#[sizeOf(vars.warehouseErrors) &gt; 0]">
+				<async doc:name="Async" doc:id="dd912583-761a-4432-84d4-07c0c636cd36">
+					<try doc:name="Try" doc:id="3d1454d4-b260-4675-b92a-dca2b893ca7a">
+						<email:send doc:name="Send-Email-Warehouse" doc:id="87110688-6704-4b5c-9b69-49914f6df39f" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["Heimanfire MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Warehouse-Impl-Flow"]' toAddresses="#[p('error-mail.receipent') splitBy ',']">
+							<email:body contentType="text/plain">
+								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+							</email:body>
+							<email:attachments><![CDATA[#[%dw 2.0
+output application/json
+var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
+---
+{
+	("HeimanfireWarehouseErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(vars.warehouseErrors, "application/json")
+}]]]></email:attachments>
+						</email:send>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="f19908aa-712c-4169-b6f6-c7cd8bee1229">
+								<logger level="INFO" doc:name="Logger" doc:id="21e93155-90ff-4554-8337-a770bbe84ad5" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+							</on-error-continue>
+						</error-handler>
+					</try>
+				</async>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Default Logger" doc:id="c066c4ad-4f82-4200-a4b4-a10f73f9d371" message="=====No Errors in Salesforce Warehouse=====" />
+			</otherwise>
+		</choice>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="d4032813-a0af-4dcc-b77b-13d3a5b2ec45" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Status" : "Warehouse data not found"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Final log message" doc:id="0c474646-399f-4939-9cb9-7b7117c7cc9d" message="Warehouse sync from Sage to Salesforce Ended" />
+		<!-- [STUDIO:"Set vars: sfRequestforEachCustomerList,  totalrecordCount"]<ee:transform doc:name="Set vars: sfRequestforEachCustomerList,  totalrecordCount" doc:id="22af50a5-134d-4a52-a37b-0f25adca914f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+(payload default [&#93; map {
+    itemCode : $.itemCode default ''
+})&#93;&#93;></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="totalrecordCount" ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+0&#93;&#93;></ee:set-variable>
+				<ee:set-variable variableName="sfWarehouseResponse" ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+[&#93;&#93;&#93;></ee:set-variable>
 			
 </ee:variables>
-		</ee:transform>
-		<choice doc:name="Choice" doc:id="4d678788-9a41-4b84-adca-c83ec87f88e1" >
-			<when expression="#[!isEmpty(payload)]">
+		</ee:transform> [STUDIO] -->
+		<!-- [STUDIO:"Choice"]<choice doc:name="Choice" doc:id="4d678788-9a41-4b84-adca-c83ec87f88e1" >
+			<when expression="#[!isEmpty(payload)&#93;">
 				<foreach doc:name="For Each" doc:id="1f29b452-50e8-48ff-9836-66e28ac5e9bf">
 					<try doc:name="Try" doc:id="60c7645b-a6c0-4381-a712-fc47e692eacf" >
 						<ee:transform doc:name="Transform Message" doc:id="406874fe-ccb4-4827-b10a-e720b7603dac">
@@ -56,31 +206,31 @@ output application/json
 							<ee:set-variable variableName="itemCode"><![CDATA[%dw 2.0
 import encodeURIComponent from dw::core::URL
 output application/java
----
-encodeURIComponent(trim(payload.itemCode)) default '']]></ee:set-variable>
+&#45;&#45;-
+encodeURIComponent(trim(payload.itemCode)) default ''&#93;&#93;></ee:set-variable>
 						</ee:variables>
 					</ee:transform>
 						<ee:transform doc:name="set Vars : requestPaths,sfRequestWarehouseSageList" doc:id="2ecce8a6-732b-49b7-892b-8ace0db8b0fd">
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
-payload]]></ee:set-payload>
+&#45;&#45;-
+payload.itemCode&#93;&#93;></ee:set-payload>
 					</ee:message>
 						<ee:variables>
 							<ee:set-variable variableName="recordCount"><![CDATA[%dw 2.0
 output application/json
----
-sizeOf(payload)]]></ee:set-variable>
+&#45;&#45;-
+sizeOf(payload)&#93;&#93;></ee:set-variable>
 							<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
 import p from Mule
 import encodeURIComponent from dw::core::URL
 output application/java
----
+&#45;&#45;-
 {
-	"url" : p('db.request.https.warehouse') ++ encodeURIComponent((vars.itemCode default "")),
-	"method" : p('db.request.https.method')
-}]]></ee:set-variable>
+	"url" : p('db.request.https.warehouse'),
+	"method" : p('db.request.https.warehouse-method')
+}&#93;&#93;></ee:set-variable>
 						</ee:variables>
 				</ee:transform>
 						<flow-ref doc:name="common-request-sage-subflow" doc:id="a5567f87-c4a8-4f31-8c03-497cb45a7a43" name="common-request-sage-subflow"/>
@@ -88,8 +238,8 @@ output application/java
 						<ee:message>
 							<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
-(payload default [] map  {
+&#45;&#45;-
+(payload default [&#93; map  {
         "found": $.found  default '',
         "itemCode": $.itemCode default '',
         "itemCodeDesc": $.itemCodeDesc default '',
@@ -98,28 +248,28 @@ output application/json
         "quantityOnPurchaseOrder": $.quantityOnPurchaseOrder as String default '',
         "quantityOnSalesOrder": $.quantityOnSalesOrder as String default '',
         "quantityOnBackOrder": $.quantityOnBackOrder as String default ''
-})]]></ee:set-payload>
+})&#93;&#93;></ee:set-payload>
 						</ee:message>
 					</ee:transform>
 						<choice doc:name="Choice" doc:id="db846bed-a370-4b37-b57a-d45bc7f4dd20">
-							<when expression="#[!isEmpty(payload)]">
-							<foreach doc:name="For Each" doc:id="b0502dc1-c583-4143-88e0-3ffdce69be4e" collection="#[payload]" batchSize="${for-each.batchSize}">
+							<when expression="#[!isEmpty(payload)&#93;">
+							<foreach doc:name="For Each" doc:id="b0502dc1-c583-4143-88e0-3ffdce69be4e" collection="#[payload&#93;" batchSize="${for-each.batchSize}">
 								<ee:transform doc:name="Transform Message" doc:id="86952c79-9b15-499d-9aa9-9e5a80b4540a">
 							<ee:message>
 								<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
-payload]]></ee:set-payload>
+&#45;&#45;-
+payload&#93;&#93;></ee:set-payload>
 							</ee:message>
 							<ee:variables>
 								<ee:set-variable variableName="requestPaths"><![CDATA[%dw 2.0
 output application/java
----
+&#45;&#45;-
 {
 	"url" : p('sfdc-request.https.warehouseitemstock'),
 	"method" : p('sfdc-request.https.products-method')
 	
-}]]></ee:set-variable>
+}&#93;&#93;></ee:set-variable>
 							</ee:variables>
 						</ee:transform>
 						<flow-ref doc:name="common-request-salesforce-subflow" doc:id="73e08910-03e5-4fc4-9453-6c479ea4167c" name="common-request-salesforce-subflow" />
@@ -138,18 +288,18 @@ var graphRequestSuccss = (payload.graphs filter($.isSuccessful ~= true)).graphRe
 	"httpStatusCode": $.httpStatusCode,
 	"referenceId": $.referenceId
 })
----
+&#45;&#45;-
 {
 	"Success": graphRequestSuccss,
 	"Error": graphRequestFailed
 }
-]]></ee:set-payload>
+&#93;&#93;></ee:set-payload>
 						</ee:message>
 						<ee:variables>
 							<ee:set-variable variableName="totalrecordCount"><![CDATA[%dw 2.0
 output application/json
----
-vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
+&#45;&#45;-
+vars.recordCount + vars.totalrecordCount&#93;&#93;></ee:set-variable>
 						</ee:variables>
 					</ee:transform>
 								<ee:transform doc:name="Set vars: sfCutomerResponse" doc:id="11790de8-1895-4625-ad13-34e3ca1a49ff">
@@ -158,8 +308,8 @@ vars.recordCount + vars.totalrecordCount]]></ee:set-variable>
 						<ee:variables>
 											<ee:set-variable variableName="sfWarehouseResponse" ><![CDATA[%dw 2.0
 output application/json
----
-vars.sfWarehouseResponse << payload]]></ee:set-variable>
+&#45;&#45;-
+vars.sfWarehouseResponse << payload&#93;&#93;></ee:set-variable>
 						
 </ee:variables>
 					</ee:transform>
@@ -170,10 +320,10 @@ vars.sfWarehouseResponse << payload]]></ee:set-variable>
 								<ee:message>
 									<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {
 	message : "GetStockStatusList records do not exist for the given itemcode " ++ (vars.itemCode default "")
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
 								</ee:message>
 							</ee:transform>
 						</otherwise>
@@ -184,7 +334,7 @@ output application/json
 									<ee:message >
 										<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {	
 	"ItemCode" : vars.itemCode,
 	"errorCode": error.errorCode,
@@ -193,35 +343,35 @@ output application/json
 	"errorType": error.errorType,
 	"transactionId": correlationId,
 	"timeStamp": now() as DateTime
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
 									</ee:message>
 									<ee:variables >
 									</ee:variables>
 								</ee:transform>
-								<logger level="INFO" doc:name="Logger" doc:id="17706ad6-2fe5-4c29-b21d-b156a60f134c" message="====== Exception Occured #[payload] ================"/>
+								<logger level="INFO" doc:name="Logger" doc:id="17706ad6-2fe5-4c29-b21d-b156a60f134c" message="====== Exception Occured #[payload&#93; ================"/>
 							</on-error-continue>
 						</error-handler>
 					</try>
-					<!-- [STUDIO:"common-request-subflow"]<flow-ref doc:name="common-request-subflow" doc:id="b357462b-848b-4fad-ab66-8661a95a560e" name="common-request-subflow" /> [STUDIO] -->
+					<flow-ref doc:name="common-request-subflow" doc:id="b357462b-848b-4fad-ab66-8661a95a560e" name="common-request-subflow" />
 				</foreach>
 				<ee:transform doc:name="For each payload" doc:id="544acf2f-e633-4c9a-9087-c78df9e0792b">
 					<ee:message>
 						<ee:set-payload><![CDATA[%dw 2.0
 output application/json
----
-vars.sfWarehouseResponse]]></ee:set-payload>
+&#45;&#45;-
+vars.sfWarehouseResponse&#93;&#93;></ee:set-payload>
 					</ee:message>
 				</ee:transform>
 				<ee:transform doc:name="Final payload" doc:id="4e700fd0-d9ad-4260-a4f3-12fab50055cb" >
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {
 	"totalrecordCount" : vars.totalrecordCount,
 	"Success": vars.sfWarehouseResponse.Success filter (!isEmpty($)),
 	"Error": vars.sfWarehouseResponse.Error filter (!isEmpty($))
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
 					</ee:message>
 				</ee:transform>
 			
@@ -231,47 +381,47 @@ output application/json
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
----
+&#45;&#45;-
 {
 	"Status" : "product data not found in productList"
-}]]></ee:set-payload>
+}&#93;&#93;></ee:set-payload>
 					</ee:message>
 				</ee:transform>
 			</otherwise>
-		</choice>
-		<logger level="INFO" doc:name="Error Logger" doc:id="8e0c9ad4-9bfd-421e-b630-99f6e8b8c14e" message="The following Warehouse has failed with Errors while sending into Salesforce : #[payload.Error]"/>
-		<choice doc:name="Choice1" doc:id="36023d99-a17f-43d0-a4bd-4a12768c93ab">
-			<when expression="#[sizeOf(payload.Error) &gt; 0]">
-				<async doc:name="Async" doc:id="dd912583-761a-4432-84d4-07c0c636cd36">
-					<try doc:name="Try" doc:id="3d1454d4-b260-4675-b92a-dca2b893ca7a">
-						<email:send doc:name="Send" doc:id="87110688-6704-4b5c-9b69-49914f6df39f" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "] - Warehouse-Impl-Flow"]'>
-							<email:to-addresses>
+		</choice> [STUDIO] -->
+		<!-- [STUDIO:"Error Logger"]<logger level="INFO" doc:name="Error Logger" doc:id="8e0c9ad4-9bfd-421e-b630-99f6e8b8c14e" message="The following Warehouse has failed with Errors while sending into Salesforce : #[payload.Error&#93;"/> [STUDIO] -->
+		<!-- [STUDIO:"Final log message"]<logger level="INFO" doc:name="Final log message" doc:id="2f8f4deb-ccd3-4b02-b0bf-78d7b9627234" message="Successfully created or updated the records in sfdc - #[flow.name&#93; executions has completed-#[correlationId&#93;-WarehouseData-#[now()&#93;"/> [STUDIO] -->
+		<!-- [STUDIO:"Choice2"]<choice doc:name="Choice2" doc:id="e9c07182-debb-4286-9812-062f28bcf83e" >
+			<when expression="#[sizeOf(payload.Error) &gt; 0&#93;" >
+				<async doc:name="Async" doc:id="555038d2-42ac-4937-bcef-f6aba6e97f6a" >
+					<try doc:name="Try" doc:id="f435f64e-08bd-43cb-a82a-31868992a8ac" >
+						<email:send doc:name="Send" doc:id="22600399-f151-466a-ac86-f199cd5c900d" config-ref="Email_SMTP_Gmail" fromAddress="mulesoft.integration.heimanfire@gmail.com" subject='#["MuleSoft Integration Errors [" ++ p("mule.env") ++ "&#93; - Warehouse-Impl-Flow"&#93;' >
+							<email:to-addresses >
 								<email:to-address value="nishith.kumar@prowesssoft.com" />
 							</email:to-addresses>
-							<email:body contentType="text/plain">
-								<email:content><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."]]]></email:content>
+							<email:body contentType="text/plain" >
+								<email:content ><![CDATA[#["The following errors occurred while processing the request. Please find the details in the attached file."&#93;&#93;&#93;></email:content>
 							</email:body>
-							<email:attachments><![CDATA[#[%dw 2.0
+							<email:attachments ><![CDATA[#[%dw 2.0
 output application/json
 var currentTimestamp = now() as String {format: "yyyy-MM-dd"}
----
+&#45;&#45;-
 {
 	("WarehouseErrors" ++ "_" ++ currentTimestamp ++ ".txt"): write(payload.Error, "application/json")
-}]]]></email:attachments>
+}&#93;&#93;&#93;></email:attachments>
 						</email:send>
-						<error-handler>
-							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="f19908aa-712c-4169-b6f6-c7cd8bee1229">
-								<logger level="INFO" doc:name="Logger" doc:id="21e93155-90ff-4554-8337-a770bbe84ad5" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
+						<error-handler >
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="ca871b3b-250a-400d-bf85-0c8139bac825" >
+								<logger level="INFO" doc:name="Logger" doc:id="f4554da2-a3a7-4e13-918b-3bba32f25d09" message="=====Error has Occoured while Sending MuleSoft Integration Sync Error Report for Salesforce Accounts====" />
 							</on-error-continue>
 						</error-handler>
 					</try>
 				</async>
 			</when>
-			<otherwise>
-				<logger level="INFO" doc:name="Default Logger" doc:id="c066c4ad-4f82-4200-a4b4-a10f73f9d371" message="=====No Errors in Salesforce Accounts=====" />
+			<otherwise >
+				<logger level="INFO" doc:name="Default Logger" doc:id="b32abd7c-f3f3-4deb-9e48-236355c18d9a" message="=====No Errors in Salesforce Accounts=====" />
 			</otherwise>
-		</choice>
-		<logger level="INFO" doc:name="Final log message" doc:id="2f8f4deb-ccd3-4b02-b0bf-78d7b9627234" message="Successfully created or updated the records in sfdc - #[flow.name] executions has completed-#[correlationId]-WarehouseData-#[now()]"/>
+		</choice> [STUDIO] -->
 	</sub-flow>
 	
 	</mule>
